@@ -22,31 +22,31 @@ Opción 2.
 - Configurar en Auth la Site URL y la lista de redirecciones permitidas por entorno (dominios de Vercel de preview/producción).
 
 ### Modelo de datos de autorización
-- `organizations(id, name, created_by, created_at)`.
-- `memberships(organization_id, user_id, role, created_at)` con `unique (organization_id, user_id)`.
-- Roles iniciales: `owner`, `admin`, `member`. La matriz de permisos se mantiene en [docs/security/permissions.md](../../security/permissions.md); lo no permitido allí está denegado.
-- Todas las tablas de negocio llevan `organization_id uuid not null`.
-- Las tablas hijas referencian al padre con clave foránea compuesta `(organization_id, parent_id) → parent(organization_id, id)`, de modo que la base de datos impide enlazar una tarea a un proyecto de otra organización aunque el cliente envíe IDs manipulados.
-- Un trigger impide modificar `organization_id` después de la creación.
-- Una organización no puede quedarse sin `owner` (comprobado en la función que cambia roles o elimina membresías).
+- `organizaciones(id, nombre, creado_por, creado_en)`.
+- `membresias(organizacion_id, usuario_id, rol, creado_en)` con `unique (organizacion_id, usuario_id)`.
+- Roles iniciales: `propietario`, `administrador`, `miembro`. La matriz de permisos se mantiene en [docs/security/permissions.md](../../security/permissions.md); lo no permitido allí está denegado.
+- Todas las tablas de negocio llevan `organizacion_id uuid not null`.
+- Las tablas hijas referencian al padre con clave foránea compuesta `(organizacion_id, padre_id) → parent(organizacion_id, id)`, de modo que la base de datos impide enlazar una tarea a un proyecto de otra organización aunque el cliente envíe IDs manipulados.
+- Un trigger impide modificar `organizacion_id` después de la creación.
+- Una organización no puede quedarse sin `propietario` (comprobado en la función que cambia roles o elimina membresías).
 
 ### Políticas RLS
 - RLS habilitado en **todas** las tablas de esquemas expuestos. Una prueba verifica que ninguna tabla expuesta lo tenga deshabilitado.
-- Funciones auxiliares en un esquema no expuesto (p. ej. `private`): `private.is_member(org_id)` y `private.has_role(org_id, roles[])`, declaradas `security definer`, `stable`, con `set search_path = ''`.
+- Funciones auxiliares en un esquema no expuesto (p. ej. `privado`): `privado.es_miembro(organizacion_id)` y `privado.tiene_rol(organizacion_id, roles[])`, declaradas `security definer`, `stable`, con `set search_path = ''`.
 - Políticas separadas por operación (`select`, `insert`, `update`, `delete`), dirigidas al rol `authenticated`. `insert` y `update` usan `with check` para impedir escribir en otra organización.
 - El rol `anon` no recibe permisos sobre tablas de negocio.
 - Las vistas expuestas se crean con `security_invoker = true` para no saltarse RLS.
-- Las operaciones de varias escrituras o con reglas de rol (crear organización + membresía owner, invitar, cambiar rol) se hacen por funciones RPC que validan el rol dentro de la transacción.
+- Las operaciones de varias escrituras o con reglas de rol (crear organización + membresía propietario, invitar, cambiar rol) se hacen por funciones RPC que validan el rol dentro de la transacción.
 
 ### Organización activa
-El frontend puede recordar qué organización está mostrando, pero es solo una preferencia de interfaz. Cada fila se autoriza por su propio `organization_id` contra `memberships`. Un `organization_id` recibido en una RPC o Edge Function se verifica siempre contra la membresía del usuario autenticado.
+El frontend puede recordar qué organización está mostrando, pero es solo una preferencia de interfaz. Cada fila se autoriza por su propio `organizacion_id` contra `membresias`. Un `organizacion_id` recibido en una RPC o Edge Function se verifica siempre contra la membresía del usuario autenticado.
 
 ### Edge Functions
 - Por defecto crean el cliente Supabase con el JWT del usuario que llama, para que RLS se aplique.
 - Solo usan la clave secreta cuando la operación lo exige (p. ej. tareas de sistema). En ese caso, la función comprueba explícitamente la membresía y el rol y lo registra en auditoría.
 
 ## Consecuencias
-- Cada política consulta `memberships`; se necesita índice `(user_id, organization_id)` y revisar planes de consulta con datos de prueba.
+- Cada política consulta `membresias`; se necesita índice `(usuario_id, organizacion_id)` y revisar planes de consulta con datos de prueba.
 - La seguridad depende de pruebas negativas exhaustivas (ver `docs/qa/test-strategy.md`).
 - Si el rendimiento lo exige, los claims en JWT podrán añadirse como optimización con una nueva ADR, sin dejar de comprobar membresía para acciones sensibles.
 

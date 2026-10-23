@@ -10,7 +10,7 @@ Ejemplo central: una agencia recibe una solicitud, valida si está completa, asi
 ## 2. Alcance inicial del MVP
 Prioriza un flujo funcional de punta a punta, no una gran cantidad de módulos incompletos:
 1. Usuarios, autenticación y organizaciones.
-2. Membresías y roles (`owner`, `admin`, `member`; permisos en `docs/security/permissions.md`).
+2. Membresías y roles (`propietario`, `administrador`, `miembro`; permisos en `docs/security/permissions.md`).
 3. Proyectos y tareas con estado, responsable y fecha límite.
 4. Flujos de trabajo básicos con definición estructurada y versionada.
 5. Reglas de automatización limitadas a condiciones y acciones permitidas.
@@ -46,15 +46,17 @@ En el MVP **no** uses Django, Django REST Framework, Celery ni Redis, y no mante
 No presupongas que Docker, Supabase CLI, Deno u otras herramientas locales están instaladas: compruébalo. Verifica las versiones estables y su compatibilidad antes de fijarlas. No asumas versiones ni instales dependencias sin justificar su necesidad.
 
 ## 5. Arquitectura y diseño
-Un único backend administrado, sin microservicios. Mantén responsabilidades y límites claros entre módulos lógicos (grupos de tablas, funciones y migraciones): accounts, organizations, projects, tasks, workflows, automation, monitoring, notifications, audit e integrations. Billing queda pospuesto hasta validar el modelo comercial.
+Un único backend administrado, sin microservicios. Mantén responsabilidades y límites claros entre módulos lógicos (grupos de tablas, funciones y migraciones): cuentas, organizaciones, proyectos, tareas, flujos, automatizacion, monitoreo, notificaciones, auditoria e integraciones. La facturación queda pospuesta hasta validar el modelo comercial.
 
 Reparte la lógica según `docs/architecture/decisions/0003-separacion-api-datos-sql-edge-functions.md`, justificando cada ubicación por seguridad, transacciones, rendimiento y mantenibilidad, no por preferencia. Evita abstracciones ceremoniales, duplicación de lógica y que un módulo escriba directamente en tablas internas de otro. Usa transacciones (funciones SQL) cuando varias escrituras deban ser atómicas. Documenta las decisiones relevantes en `docs/architecture/decisions/`.
+
+**Nombres en español (ADR-0005):** todo lo que nombremos en el desarrollo se escribe en español: tablas, columnas, funciones, roles, estados, archivos de prueba, variables de entorno propias, mensajes de error al usuario y mensajes de commit (conservando prefijos como `docs:` o `feat:`). Se escriben en `snake_case`, minúsculas, sin tildes ni ñ. Usa el glosario de `docs/architecture/decisions/0005-nombres-en-espanol.md` y añade allí los nombres nuevos antes de usarlos. Solo queda en inglés lo que imponen SQL, PostgreSQL, Supabase y las herramientas (`select`, `auth.uid()`, `anon`, `SUPABASE_URL`...).
 
 ## 6. Seguridad obligatoria
 - No subas secretos, credenciales ni archivos `.env` reales al repositorio.
 - Mantén `.env.example` sin secretos reales.
 - El frontend solo usa la clave publicable de Supabase. Las claves secretas (`sb_secret_...` o `service_role` heredada) nunca se exponen en el navegador, ni se suben a Git, ni se incluyen en código cliente o variables públicas de Vercel.
-- No confíes en un `organization_id` enviado por el cliente: verifica siempre la membresía del usuario autenticado (`auth.uid()`). No autorices con `user_metadata`.
+- No confíes en un `organizacion_id` enviado por el cliente: verifica siempre la membresía del usuario autenticado (`auth.uid()`). No autorices con `user_metadata`.
 - RLS habilitado en todas las tablas expuestas, con políticas por operación y `with check` en escrituras; `anon` sin acceso a datos de negocio; vistas con `security_invoker`; funciones `security definer` solo justificadas y con `search_path` fijo.
 - Cada consulta, RPC, Edge Function, job programado y exportación debe comprobar pertenencia y permisos. Una Edge Function que use la clave secreta debe verificar membresía explícitamente.
 - Prueba explícitamente que usuarios de una organización no puedan leer, modificar, borrar ni ejecutar acciones sobre otra.

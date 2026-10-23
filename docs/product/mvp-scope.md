@@ -25,7 +25,7 @@ Validar si equipos pequeños de servicios pueden usar Nexo para coordinar un pro
 - Métricas sencillas de la organización.
 - Documentación de la API (Data API, RPC, Edge Functions) y pruebas.
 
-Roles y permisos: `owner`, `admin` y `member`, según `docs/security/permissions.md`.
+Roles y permisos: `propietario`, `administrador` y `miembro`, según `docs/security/permissions.md`.
 
 La arquitectura técnica es provisional: Supabase como backend y Vercel para el frontend de Stitch (ver `docs/architecture/decisions/`).
 

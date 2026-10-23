@@ -35,8 +35,8 @@ Estado: borrador para validar. Los requisitos no validados deben tratarse como h
 - RF-037: los usuarios autorizados podrán consultar métricas sencillas de su organización, por ejemplo tareas por estado, tareas vencidas y ejecuciones fallidas. Las métricas concretas se definirán al llegar a esa fase.
 
 ### Roles y permisos
-- RF-005: los roles iniciales serán `owner`, `admin` y `member`; sus permisos están en `docs/security/permissions.md` y todo lo no permitido está denegado.
-- RF-006: una organización siempre tendrá al menos un `owner`.
+- RF-005: los roles iniciales serán `propietario`, `administrador` y `miembro`; sus permisos están en `docs/security/permissions.md` y todo lo no permitido está denegado.
+- RF-006: una organización siempre tendrá al menos un `propietario`.
 
 ### API y operación
 - RF-040: los recursos del MVP se expondrán mediante una API documentada, compuesta por la Data API de Supabase, funciones RPC y Edge Functions (ver `docs/architecture/overview.md`).

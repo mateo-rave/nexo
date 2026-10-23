@@ -13,5 +13,6 @@ Una decisión debe incluir contexto, opciones consideradas, decisión tomada, co
 | [0002](0002-autenticacion-y-autorizacion-multiempresa.md) | Autenticación y autorización multiempresa | Aceptada |
 | [0003](0003-separacion-api-datos-sql-edge-functions.md) | Separación entre Data API, SQL y Edge Functions | Aceptada (provisional) |
 | [0004](0004-entornos-migraciones-y-pruebas.md) | Gestión de entornos, migraciones y pruebas | Aceptada (provisional) |
+| [0005](0005-nombres-en-espanol.md) | Nombres del código en español (incluye el glosario oficial) | Aceptada |
 
 La ADR-0001 sustituye la preferencia inicial por Django/DRF/Celery/Redis que figuraba en `CLAUDE.md` (no existía una ADR previa).

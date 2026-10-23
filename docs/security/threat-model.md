@@ -29,9 +29,9 @@ Estado: inicial, adaptado a la arquitectura provisional con Supabase ([ADR-0001]
 - **Vistas que omiten RLS** por ejecutarse con permisos del propietario.
 - **Autorización basada en `user_metadata`**, que el usuario puede modificar.
 - **Claims desactualizados** si en el futuro se ponen roles en el JWT.
-- **Cambio de `organization_id`** en un `update` para mover una fila a otra organización.
+- **Cambio de `organizacion_id`** en un `update` para mover una fila a otra organización.
 - **Relaciones cruzadas:** tarea de la organización B apuntando a proyecto de A.
-- **Jobs de cron** que crean filas sin `organization_id` correcto o duplican efectos.
+- **Jobs de cron** que crean filas sin `organizacion_id` correcto o duplican efectos.
 - **Realtime / Storage** habilitados sin políticas cuando se usen.
 - **Cambios manuales en el dashboard** de producción no versionados que desactivan una política.
 - **Mensajes de error de PostgREST** que exponen nombres de restricciones o detalles internos.
@@ -66,7 +66,7 @@ Decisión: RLS es el mecanismo principal de aislamiento (ADR-0002). Requisitos:
 - Documentar cada política junto a su migración.
 - Políticas por operación y por rol.
 - Probar con roles `authenticated` y `anon` simulando JWT, nunca solo con roles con bypass.
-- Las funciones de sistema (cron) que operan sin usuario deben propagar el `organization_id` del recurso de origen y tener pruebas propias.
+- Las funciones de sistema (cron) que operan sin usuario deben propagar el `organizacion_id` del recurso de origen y tener pruebas propias.
 
 RLS no es la única defensa: se combina con restricciones, triggers y validación en RPC y Edge Functions.
 

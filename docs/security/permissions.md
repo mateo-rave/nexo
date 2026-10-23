@@ -4,7 +4,7 @@ Estado: aceptado para el MVP (ver [ADR-0002](../architecture/decisions/0002-aute
 
 ## Principios
 - **Denegar por defecto:** si una acción no aparece permitida en esta matriz, está prohibida.
-- **Por organización:** un rol solo vale dentro de la organización de la membresía. Ser `owner` en A no da ningún permiso en B.
+- **Por organización:** un rol solo vale dentro de la organización de la membresía. Ser `propietario` en A no da ningún permiso en B.
 - **Sin membresía, sin acceso:** un usuario autenticado sin membresía en una organización no ve que esa organización existe.
 - **Sin acceso anónimo:** el rol `anon` no lee ni escribe datos de negocio.
 - **El identificador no autoriza:** conocer o enviar el ID de un recurso (organización, proyecto, tarea, regla) nunca concede acceso; se verifica la membresía del usuario autenticado.
@@ -13,31 +13,31 @@ Estado: aceptado para el MVP (ver [ADR-0002](../architecture/decisions/0002-aute
 ## Roles iniciales
 | Rol | Para quién | Resumen |
 |---|---|---|
-| `owner` | Quien crea la organización o recibe la propiedad. | Control total de la organización, incluida la gestión de administradores. Siempre debe existir al menos uno. |
-| `admin` | Coordinadores del equipo. | Gestiona proyectos, flujos, reglas y miembros con rol `member`. |
-| `member` | Personas que ejecutan el trabajo. | Trabaja con tareas y consulta la información de la organización. |
+| `propietario` | Quien crea la organización o recibe la propiedad. | Control total de la organización, incluida la gestión de administradores. Siempre debe existir al menos uno. |
+| `administrador` | Coordinadores del equipo. | Gestiona proyectos, flujos, reglas y miembros con rol `miembro`. |
+| `miembro` | Personas que ejecutan el trabajo. | Trabaja con tareas y consulta la información de la organización. |
 
 ## Matriz de permisos
 ✅ permitido · ❌ denegado · *condición* = permitido solo si se cumple.
 
 ### Organización y miembros
-| Acción | owner | admin | member |
+| Acción | propietario | administrador | miembro |
 |---|---|---|---|
 | Ver la organización | ✅ | ✅ | ✅ |
 | Editar nombre y datos de la organización | ✅ | ✅ | ❌ |
 | Eliminar la organización | ✅ | ❌ | ❌ |
 | Ver la lista de miembros y sus roles | ✅ | ✅ | ✅ |
-| Añadir un miembro con rol `member` | ✅ | ✅ | ❌ |
-| Añadir un miembro con rol `admin` u `owner` | ✅ | ❌ | ❌ |
+| Añadir un miembro con rol `miembro` | ✅ | ✅ | ❌ |
+| Añadir un miembro con rol `administrador` u `propietario` | ✅ | ❌ | ❌ |
 | Cambiar el rol de un miembro | ✅ | ❌ | ❌ |
-| Quitar a un `member` | ✅ | ✅ | ❌ |
-| Quitar a un `admin` u `owner` | ✅ | ❌ | ❌ |
-| Salir de la organización | *si no es el último owner* | ✅ | ✅ |
+| Quitar a un `miembro` | ✅ | ✅ | ❌ |
+| Quitar a un `administrador` u `propietario` | ✅ | ❌ | ❌ |
+| Salir de la organización | *si no es el último propietario* | ✅ | ✅ |
 
-Regla adicional: ninguna operación puede dejar a la organización sin `owner`.
+Regla adicional: ninguna operación puede dejar a la organización sin `propietario`.
 
 ### Proyectos y tareas
-| Acción | owner | admin | member |
+| Acción | propietario | administrador | miembro |
 |---|---|---|---|
 | Ver proyectos | ✅ | ✅ | ✅ |
 | Crear, editar y archivar proyectos | ✅ | ✅ | ❌ |
@@ -50,7 +50,7 @@ Regla adicional: ninguna operación puede dejar a la organización sin `owner`.
 | Eliminar tareas | ✅ | ✅ | ❌ |
 
 ### Flujos, reglas y ejecuciones
-| Acción | owner | admin | member |
+| Acción | propietario | administrador | miembro |
 |---|---|---|---|
 | Ver flujos y reglas | ✅ | ✅ | ✅ |
 | Crear y editar borradores de flujos y reglas | ✅ | ✅ | ❌ |
@@ -61,7 +61,7 @@ Regla adicional: ninguna operación puede dejar a la organización sin `owner`.
 | Reintentar manualmente una ejecución fallida | ✅ | ✅ | ❌ |
 
 ### Detección, notificaciones, métricas y auditoría
-| Acción | owner | admin | member |
+| Acción | propietario | administrador | miembro |
 |---|---|---|---|
 | Ver hallazgos (tareas vencidas) | ✅ | ✅ | ✅ |
 | Marcar un hallazgo como resuelto | ✅ | ✅ | *si es responsable de la tarea afectada* |
@@ -89,4 +89,4 @@ Se registran como mínimo: quién (usuario o "sistema"), qué acción, sobre qu�
 Por cada fila de la matriz debe existir al menos una prueba del caso **permitido** y una del caso **denegado** (rol insuficiente, otra organización, sin membresía o anónimo). Detalle en [test-strategy.md](../qa/test-strategy.md).
 
 ## Revisión
-La matriz es inicial y se ajustará con el uso real. Ampliar permisos de `member` o crear roles nuevos (p. ej. solo lectura) requiere actualizar este documento y la ADR-0002.
+La matriz es inicial y se ajustará con el uso real. Ampliar permisos de `miembro` o crear roles nuevos (p. ej. solo lectura) requiere actualizar este documento y la ADR-0002.

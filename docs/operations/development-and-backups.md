@@ -82,6 +82,6 @@ No ejecutar scripts destructivos, `db reset` ni restauraciones sobre producción
 ## Despliegue
 - **Backend:** migraciones con Supabase CLI y despliegue de Edge Functions desde CI o manualmente con autorización.
 - **Frontend:** Vercel, previews por rama apuntando al proyecto de desarrollo; producción apuntando al proyecto de producción.
-- **Comprobaciones de salud:** Edge Function `health` (pendiente) y estado de Supabase.
+- **Comprobaciones de salud:** Edge Function `salud` (pendiente) y estado de Supabase.
 - **Reversión:** las migraciones no se revierten automáticamente; cada migración de riesgo debe documentar su reversión manual. El frontend se revierte desde Vercel.
 - **Verificación posterior:** prueba de humo del flujo crítico con un usuario de prueba y revisión del Security Advisor.

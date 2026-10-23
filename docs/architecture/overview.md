@@ -33,15 +33,15 @@ Un único backend administrado (Supabase) con el esquema, las políticas y las f
 | Componente | Responsable de | Nunca |
 |---|---|---|
 | Frontend (Stitch → Vercel) | Presentación; validación de formularios como ayuda de UX; recordar la organización mostrada; llamar a Auth, Data API, RPC y Edge Functions con el JWT del usuario. | Decidir permisos, aplicar reglas de negocio, contener claves secretas. Su framework (Vite, Next.js u otro) no se asume hasta inspeccionar el código. |
-| Supabase Auth | Registro, inicio de sesión, confirmación de correo, recuperación de contraseña, emisión y renovación de JWT. Redirecciones permitidas por entorno. | Guardar roles por organización (eso vive en `memberships`). |
+| Supabase Auth | Registro, inicio de sesión, confirmación de correo, recuperación de contraseña, emisión y renovación de JWT. Redirecciones permitidas por entorno. | Guardar roles por organización (eso vive en `membresias`). |
 | Data API (PostgREST) | Lecturas, listados paginados y filtrados, CRUD de una tabla protegido por RLS. | Operaciones de varias tablas o transiciones de estado. |
-| Funciones SQL (RPC) | Crear organización + membresía owner; gestionar miembros y roles; transiciones de estado de tareas; publicar versiones de flujos; evaluar reglas y aplicar acciones internas; detección de bloqueos. | Llamadas HTTP o uso de secretos de terceros. |
-| Triggers | Auditoría de acciones críticas; `updated_at`; inmutabilidad de versiones publicadas; impedir cambios de `organization_id`; registrar eventos de dominio para el motor. | Lógica extensa difícil de rastrear. |
+| Funciones SQL (RPC) | Crear organización + membresía propietario; gestionar miembros y roles; transiciones de estado de tareas; publicar versiones de flujos; evaluar reglas y aplicar acciones internas; detección de bloqueos. | Llamadas HTTP o uso de secretos de terceros. |
+| Triggers | Auditoría de acciones críticas; `actualizado_en`; inmutabilidad de versiones publicadas; impedir cambios de `organizacion_id`; registrar eventos de dominio para el motor. | Lógica extensa difícil de rastrear. |
 | RLS y permisos | Aislamiento por organización en cada tabla; permisos por rol y operación; `anon` sin acceso a datos de negocio. | Ser la única defensa: se combinan con restricciones y validación en RPC. |
 | Edge Functions | Envío de correos y efectos externos; orquestación con timeouts y reintentos de red; endpoints con contrato propio; salud. | Duplicar CRUD o reglas ya aplicadas en SQL; usar la clave secreta sin comprobar membresía. |
 | Tareas programadas (Supabase Cron) | Ejecutar periódicamente funciones SQL idempotentes (detección, reintentos pendientes). Invocar Edge Functions vía `pg_net` solo si hay efectos externos. | Contener lógica dentro del job. |
-| Auditoría | Tabla `audit_log` de solo inserción, escrita por triggers/funciones; lectura por roles autorizados de la organización. | Ser editable o borrable por usuarios. |
-| Notificaciones | Tabla `notifications` por destinatario, creadas por SQL con clave de deduplicación; el usuario solo lee y marca como leídas las suyas. Correo externo posterior vía Edge Function. | Enviarse dos veces por el mismo hallazgo. |
+| Auditoría | Tabla `auditoria` de solo inserción, escrita por triggers/funciones; lectura por roles autorizados de la organización. | Ser editable o borrable por usuarios. |
+| Notificaciones | Tabla `notificaciones` por destinatario, creadas por SQL con clave de deduplicación; el usuario solo lee y marca como leídas las suyas. Correo externo posterior vía Edge Function. | Enviarse dos veces por el mismo hallazgo. |
 | Realtime | Fuera del MVP; candidato para notificaciones en vivo con canales privados autorizados. | Activarse sin una funcionalidad que lo necesite. |
 
 El detalle y la justificación del reparto están en la ADR-0003.
@@ -49,46 +49,46 @@ El detalle y la justificación del reparto están en la ADR-0003.
 ## Módulos lógicos
 Se mantienen como límites de responsabilidad, ahora expresados como grupos de tablas, funciones y migraciones (no como apps de Django):
 
-- `accounts`: perfil de usuario vinculado a `auth.users`.
-- `organizations`: organizaciones, membresías, roles.
-- `projects`: proyectos.
-- `tasks`: tareas, asignación, estados, fechas límite.
-- `workflows`: definiciones y versiones publicadas inmutables.
-- `automation`: reglas, eventos, ejecuciones, acciones.
-- `monitoring`: hallazgos de bloqueo y métricas básicas.
-- `notifications`: notificaciones internas.
-- `audit`: historial de acciones.
-- `integrations`: futuro; conectores y webhooks.
+- `cuentas`: perfil de usuario vinculado a `auth.users`.
+- `organizaciones`: organizaciones, membresías, roles.
+- `proyectos`: proyectos.
+- `tareas`: tareas, asignación, estados, fechas límite.
+- `flujos`: definiciones y versiones publicadas inmutables.
+- `automatizacion`: reglas, eventos, ejecuciones, acciones.
+- `monitoreo`: hallazgos de bloqueo y métricas básicas.
+- `notificaciones`: notificaciones internas.
+- `auditoria`: historial de acciones.
+- `integraciones`: futuro; conectores y webhooks.
 
 Crea las tablas de un módulo cuando exista una primera necesidad implementable y probada. Un módulo no escribe directamente en tablas internas de otro: usa sus funciones.
 
 Esquemas de PostgreSQL:
 - `public`: tablas y funciones RPC que el frontend puede usar (todas con RLS).
-- `private`: funciones auxiliares de autorización y lógica interna; no expuesto por la Data API.
+- `privado`: funciones auxiliares de autorización y lógica interna; no expuesto por la Data API.
 - Nombres de esquema adicionales (p. ej. un esquema `api` dedicado) quedan pendientes.
 
 ## Multiempresa
-- Cada tabla de negocio tiene `organization_id not null`.
-- Las tablas hijas usan clave foránea compuesta `(organization_id, parent_id)` para que la base de datos impida relaciones entre organizaciones.
-- RLS habilitado en todas las tablas expuestas; políticas por operación basadas en `memberships` y `auth.uid()`.
-- Un `organization_id` enviado por el cliente nunca es prueba de autorización: se valida contra la membresía.
-- Las funciones de sistema (cron) operan sobre todas las organizaciones, pero cada fila que crean hereda el `organization_id` del recurso que la originó.
+- Cada tabla de negocio tiene `organizacion_id not null`.
+- Las tablas hijas usan clave foránea compuesta `(organizacion_id, padre_id)` para que la base de datos impida relaciones entre organizaciones.
+- RLS habilitado en todas las tablas expuestas; políticas por operación basadas en `membresias` y `auth.uid()`.
+- Un `organizacion_id` enviado por el cliente nunca es prueba de autorización: se valida contra la membresía.
+- Las funciones de sistema (cron) operan sobre todas las organizaciones, pero cada fila que crean hereda el `organizacion_id` del recurso que la originó.
 
-Detalle en ADR-0002. Roles (`owner`, `admin`, `member`) y matriz de permisos en [docs/security/permissions.md](../security/permissions.md).
+Detalle en ADR-0002. Roles (`propietario`, `administrador`, `miembro`) y matriz de permisos en [docs/security/permissions.md](../security/permissions.md).
 
 ## Motor de automatización (diseño propuesto)
-- **Definiciones:** `workflow_definitions` y `workflow_versions` (`draft` → `published`). Una versión publicada es inmutable (trigger). Reglas en `automation_rules` con versión, activador, condiciones y acciones en `jsonb` validado contra un catálogo cerrado de tipos permitidos. La validación de esquema (función de validación propia o extensión `pg_jsonschema`) queda pendiente.
+- **Definiciones:** `definiciones_flujo` y `versiones_flujo` (`borrador` → `publicada`). Una versión publicada es inmutable (trigger). Reglas en `reglas_automatizacion` con versión, activador, condiciones y acciones en `jsonb` validado contra un catálogo cerrado de tipos permitidos. La validación de esquema (función de validación propia o extensión `pg_jsonschema`) queda pendiente.
 - **Activadores del MVP:** cambio de estado de tarea, tarea creada y comprobación programada.
 - **Condiciones del MVP:** comparaciones sobre campos conocidos (estado, fecha límite, responsable asignado, tiempo sin actividad).
 - **Acciones del MVP:** crear notificación interna, crear hallazgo, crear tarea de seguimiento, cambiar estado. Todas internas.
-- **Ejecuciones:** `automation_runs` con `status` (`pending`, `running`, `succeeded`, `failed`, `skipped`), `rule_id`, `rule_version`, `trigger_event_id`, `idempotency_key` único, `attempts`, `max_attempts`, timestamps, `error_code` y mensaje seguro.
-- **Acciones:** `automation_actions` con estado propio (`scheduled`, `completed`, `failed`), para distinguir acción programada de acción completada.
+- **Ejecuciones:** `ejecuciones_automatizacion` con `estado` (`pendiente`, `en_ejecucion`, `exitosa`, `fallida`, `omitida`), `regla_id`, `version_regla`, `evento_id`, `clave_idempotencia` único, `intentos`, `max_intentos`, timestamps, `codigo_error` y mensaje seguro.
+- **Acciones:** `acciones_automatizacion` con estado propio (`programada`, `completada`, `fallida`), para distinguir acción programada de acción completada.
 - **Idempotencia:** restricción `unique` sobre la clave de idempotencia de cada ejecución y sobre la clave de deduplicación de hallazgos y notificaciones; inserciones con `on conflict do nothing`.
 - **Concurrencia:** las ejecuciones pendientes se toman con `for update skip locked`.
 - **Reintentos:** solo para fallos transitorios, con límite de intentos y espera creciente.
 - **Timeouts:** `statement_timeout` en funciones SQL; timeout explícito en llamadas externas de Edge Functions.
-- **Ciclos:** las acciones generadas por automatización llevan `origin_run_id` y profundidad; se rechaza superar una profundidad máxima y que una regla se dispare por un evento que ella misma causó.
-- **Resultado:** una ejecución solo es `succeeded` si todas sus acciones obligatorias se completaron en la misma transacción o fueron confirmadas por la Edge Function correspondiente.
+- **Ciclos:** las acciones generadas por automatización llevan `ejecucion_origen_id` y profundidad; se rechaza superar una profundidad máxima y que una regla se dispare por un evento que ella misma causó.
+- **Resultado:** una ejecución solo es `exitosa` si todas sus acciones obligatorias se completaron en la misma transacción o fueron confirmadas por la Edge Function correspondiente.
 
 ## API para el frontend
 El contrato consumible por Stitch se compone de:

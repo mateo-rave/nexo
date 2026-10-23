@@ -27,35 +27,35 @@ Cuando el frontend de Stitch esté integrado, Playwright probará los flujos pri
 Cada permiso de [docs/security/permissions.md](../security/permissions.md) necesita **dos** pruebas: una que demuestre que el rol autorizado **sí** puede hacerlo y otra que demuestre que un rol no autorizado **no** puede. Probar solo los rechazos no basta: una política que lo deniega todo también los pasaría.
 
 Ejemplos de casos permitidos que deben pasar:
-- `owner_a`, `admin_a` y `member_a` ven los proyectos y tareas de A.
-- `admin_a` crea un proyecto en A; `member_a` crea una tarea en A.
-- `member_a` cambia el estado de una tarea de la que es responsable.
-- `owner_a` cambia el rol de `member_a` a `admin`.
+- `propietario_a`, `administrador_a` y `miembro_a` ven los proyectos y tareas de A.
+- `administrador_a` crea un proyecto en A; `miembro_a` crea una tarea en A.
+- `miembro_a` cambia el estado de una tarea de la que es responsable.
+- `propietario_a` cambia el rol de `miembro_a` a `administrador`.
 - Cada usuario ve y marca como leídas sus propias notificaciones.
-- `admin_a` consulta el historial de auditoría de A.
+- `administrador_a` consulta el historial de auditoría de A.
 
 ## Pruebas de aislamiento multiempresa (obligatorias)
-Datos base: organizaciones A y B; usuarios `owner_a`, `admin_a`, `member_a`, `owner_b`, `sin_membresia` y anónimo. Para **cada** tabla de negocio expuesta y **cada** RPC/Edge Function:
+Datos base: organizaciones A y B; usuarios `propietario_a`, `administrador_a`, `miembro_a`, `propietario_b`, `sin_membresia` y anónimo. Para **cada** tabla de negocio expuesta y **cada** RPC/Edge Function:
 
 | Caso | Resultado esperado |
 |---|---|
-| `owner_b` lista filas de A | Resultado vacío. |
-| `owner_b` lee una fila de A por ID | Sin filas. |
-| `owner_b` inserta una fila con `organization_id` de A | Error de RLS (`42501`) o rechazo de la RPC. |
-| `owner_b` inserta en B una fila hija que apunta a un padre de A (FK compuesta) | Error de restricción. |
-| `owner_b` actualiza una fila de A | 0 filas afectadas **y** la fila de A queda intacta (verificado como `owner_a`). |
-| `owner_b` cambia el `organization_id` de su fila a A | Rechazado por trigger/política. |
-| `owner_b` borra una fila de A | 0 filas afectadas **y** la fila sigue existiendo. |
-| `owner_b` llama a una RPC/Edge Function con un ID de A (organización, proyecto, tarea, regla) | Error de autorización; sin efectos ni auditoría a nombre de A. |
-| `owner_b` ejecuta o publica una regla/flujo de A | Rechazado; sin ejecución creada. |
-| `sin_membresia` hace cualquiera de lo anterior | Igual que `owner_b`. |
+| `propietario_b` lista filas de A | Resultado vacío. |
+| `propietario_b` lee una fila de A por ID | Sin filas. |
+| `propietario_b` inserta una fila con `organizacion_id` de A | Error de RLS (`42501`) o rechazo de la RPC. |
+| `propietario_b` inserta en B una fila hija que apunta a un padre de A (FK compuesta) | Error de restricción. |
+| `propietario_b` actualiza una fila de A | 0 filas afectadas **y** la fila de A queda intacta (verificado como `propietario_a`). |
+| `propietario_b` cambia el `organizacion_id` de su fila a A | Rechazado por trigger/política. |
+| `propietario_b` borra una fila de A | 0 filas afectadas **y** la fila sigue existiendo. |
+| `propietario_b` llama a una RPC/Edge Function con un ID de A (organización, proyecto, tarea, regla) | Error de autorización; sin efectos ni auditoría a nombre de A. |
+| `propietario_b` ejecuta o publica una regla/flujo de A | Rechazado; sin ejecución creada. |
+| `sin_membresia` hace cualquiera de lo anterior | Igual que `propietario_b`. |
 | `anon` lee o escribe cualquier tabla de negocio | Error de permisos. |
-| `member_a` ejecuta una acción reservada a `admin`/`owner` | Rechazado. |
-| `admin_a` asciende a alguien a `admin` u `owner` | Rechazado. |
-| `member_a` lee notificaciones de otro usuario de A | Sin filas. |
-| `member_a` lee el historial de auditoría | Sin filas o error de permisos. |
+| `miembro_a` ejecuta una acción reservada a `administrador`/`propietario` | Rechazado. |
+| `administrador_a` asciende a alguien a `administrador` u `propietario` | Rechazado. |
+| `miembro_a` lee notificaciones de otro usuario de A | Sin filas. |
+| `miembro_a` lee el historial de auditoría | Sin filas o error de permisos. |
 | Cualquier rol edita o borra un registro de auditoría | Rechazado. |
-| `owner_a` intenta quedarse sin owner en A | Rechazado. |
+| `propietario_a` intenta quedarse sin propietario en A | Rechazado. |
 | Membresía revocada | El usuario pierde acceso en la siguiente petición. |
 
 Comprobaciones globales:
@@ -65,20 +65,20 @@ Comprobaciones globales:
 - Ninguna clave secreta aparece en el bundle del frontend ni en el repositorio (búsqueda automática en CI).
 
 ## Pruebas del motor de automatización
-- Una regla válida se ejecuta y queda una ejecución `succeeded` con versión de regla, timestamps y resultado.
+- Una regla válida se ejecuta y queda una ejecución `exitosa` con versión de regla, timestamps y resultado.
 - Una definición con condición o acción no permitida se rechaza al guardar.
 - Una versión publicada no puede modificarse.
 - El mismo evento procesado dos veces produce una sola ejecución y un solo efecto.
 - La detección programada ejecutada dos veces seguidas no duplica hallazgos ni notificaciones.
 - Dos procesos concurrentes no toman la misma ejecución pendiente.
-- Un fallo transitorio se reintenta hasta el límite y termina `failed` con error seguro.
-- Si una acción falla, la ejecución no queda `succeeded` y no persisten efectos parciales.
-- Una acción externa queda `scheduled` hasta que la Edge Function la confirma.
+- Un fallo transitorio se reintenta hasta el límite y termina `fallida` con error seguro.
+- Si una acción falla, la ejecución no queda `exitosa` y no persisten efectos parciales.
+- Una acción externa queda `programada` hasta que la Edge Function la confirma.
 - Una cadena de reglas que se dispararían mutuamente se detiene en la profundidad máxima.
-- Proveedor externo caído: la acción queda `failed`/reintentable, no `completed`.
+- Proveedor externo caído: la acción queda `fallida`/reintentable, no `completada`.
 
 ## Flujos críticos
-- Registrar usuario y crear organización (con membresía owner atómica).
+- Registrar usuario y crear organización (con membresía propietario atómica).
 - Crear proyecto y tarea con responsable y fecha límite.
 - Definir y publicar una regla permitida.
 - Procesar el evento sin duplicar sus efectos.
