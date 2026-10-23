@@ -1,6 +1,6 @@
 # Fase 1 — Organizaciones, membresías y seguridad base
 
-- Estado: plan con decisiones confirmadas; implementación no iniciada (aún no se ha escrito SQL).
+- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos (5 en parte: falta verificar los comandos remotos tras `link`). Paso 1 de implementación hecho (`supabase init`). Aún no se ha escrito SQL.
 - Fecha: 2026-10-23
 - Referencias: [ADR-0002](../architecture/decisions/0002-autenticacion-y-autorizacion-multiempresa.md), [ADR-0004](../architecture/decisions/0004-entornos-migraciones-y-pruebas.md), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md).
 

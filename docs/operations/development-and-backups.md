@@ -6,7 +6,7 @@ Estado: provisional. Escenario objetivo: Supabase (backend) + Vercel (frontend).
 | Herramienta | Para qué | Estado en la máquina actual (2026-10-23) |
 |---|---|---|
 | Git | Control de versiones | Instalado |
-| Supabase CLI | Migraciones, entorno local, pruebas pgTAP, tipos, despliegue de Edge Functions | No instalado; se instalará con npm como dependencia del proyecto |
+| Supabase CLI | Migraciones, entorno local, pruebas pgTAP, tipos, despliegue de Edge Functions | Instalada con npm como dependencia del proyecto: 2.120.0 (`npm install` la restaura) |
 | Docker Desktop (con WSL 2 en Windows) | `supabase start`, `db reset`, `test db` y `functions serve` locales | No instalado (no se usará por ahora) |
 | Deno | Edge Functions, sus pruebas y pruebas de API | No instalado |
 | Node.js | Ejecutar la Supabase CLI con `npx`; herramientas del frontend de Stitch | Instalado (v24) |
@@ -23,9 +23,9 @@ No presuponer que estas herramientas están disponibles: comprobarlas antes de c
 **Comandos interactivos:** `npx supabase login` abre el navegador y `npx supabase link` pide la contraseña de la base de datos. Los ejecuta **el propietario en su propia terminal**, para que la contraseña no pase por ningún chat ni registro.
 
 ## Desarrollo (flujo vigente: proyecto en la nube, sin Docker)
-Decisión del 2026-10-23 (ADR-0004). Las cuentas y el proyecto **aún no existen**.
+Decisión del 2026-10-23 (ADR-0004). La cuenta de Supabase y el proyecto `nexo-dev` ya existen; falta enlazarlo con la CLI.
 
-**Lo hace el propietario, manualmente:**
+**Lo hace el propietario, manualmente (pasos 1 y 2 hechos):**
 1. Crear la cuenta de Supabase.
 2. Crear un proyecto exclusivo para desarrollo, por ejemplo `nexo-dev`.
 3. Guardar la contraseña de la base de datos en un gestor de contraseñas.

@@ -4,7 +4,7 @@
 - Fecha: 2026-10-23 (propuesta y aceptación provisional)
 - Responsables: propietario del producto
 
-> **En pocas palabras:** por ahora no instalamos Docker. Trabajaremos con un proyecto de Supabase en la nube que sirve **solo para desarrollo** (un "laboratorio" donde se puede probar y romper sin afectar a clientes reales). Los cambios de la base de datos se escriben en archivos SQL numerados (migraciones) guardados en Git y se envían a ese proyecto con la CLI de Supabase. Producción será otro proyecto distinto, creado más adelante. Ni las cuentas ni el proyecto existen todavía: los creará el propietario.
+> **En pocas palabras:** por ahora no instalamos Docker. Trabajaremos con un proyecto de Supabase en la nube que sirve **solo para desarrollo** (un "laboratorio" donde se puede probar y romper sin afectar a clientes reales). Los cambios de la base de datos se escriben en archivos SQL numerados (migraciones) guardados en Git y se envían a ese proyecto con la CLI de Supabase. Producción será otro proyecto distinto, creado más adelante. El propietario ya creó la cuenta y el proyecto de desarrollo `nexo-dev`.
 
 ## Contexto
 La máquina de desarrollo actual (Windows) no tiene Docker, Supabase CLI, Deno ni PostgreSQL instalados (inspección del 2026-10-23). El entorno local completo de Supabase (`supabase start`, `supabase test db` contra la base local) usa contenedores y requiere un runtime compatible con Docker. Se necesitan entornos separados, migraciones reproducibles y pruebas que no toquen producción.
@@ -21,15 +21,18 @@ La máquina de desarrollo actual (Windows) no tiene Docker, Supabase CLI, Deno n
 - **Branching:** la opción 3 se reevaluará al elegir plan.
 - Ninguna prueba se declarará aprobada si no se ejecutó en alguno de estos entornos.
 
-### Qué funciona sin Docker (a confirmar al instalar la CLI)
+### Qué funciona sin Docker (comprobado con Supabase CLI 2.120.0 el 2026-10-23)
 | Comando / acción | Uso | ¿Necesita Docker? |
 |---|---|---|
-| `supabase init` | Crea la carpeta `supabase/` en el repositorio. | Según la documentación, no. |
-| `supabase migration new <nombre>` | Crea un archivo de migración vacío con fecha. | No (solo crea un archivo). |
-| `supabase login` / `supabase link` | Conecta la CLI con el proyecto de desarrollo. | Según la documentación, no. |
-| `supabase db push --dry-run` / `db push` | Muestra y aplica las migraciones pendientes en el proyecto remoto. | Según la documentación, no. |
-| `supabase test db` contra el proyecto remoto | Ejecutar pgTAP. | **No verificado.** La documentación lo describe para la base local. |
+| `supabase --version` | Comprueba la instalación. | No. **Verificado** (responde `2.120.0`). |
+| `supabase init` | Crea `supabase/config.toml` y `supabase/.gitignore`. Las carpetas `migrations/` y `tests/` se crean al usarlas. | No. **Verificado.** |
+| `supabase migration new <nombre>` | Crea un archivo de migración vacío con fecha. | No (solo crea un archivo). Se verificará al crear la primera migración. |
+| `supabase login` / `supabase link` | Conecta la CLI con el proyecto de desarrollo. | Según la documentación, no. Pendiente: los ejecuta el propietario. |
+| `supabase db push --dry-run` / `db push` | Muestra y aplica las migraciones pendientes en el proyecto remoto (`--linked`). | Según la documentación, no. Pendiente de verificar tras `link`. |
+| `supabase test db --linked` | Ejecutar pgTAP contra el proyecto enlazado. | **No verificado.** La opción `--linked` existe en 2.120.0 (`test db --help`); falta comprobar si internamente usa un contenedor. Si falla, se usa el SQL Editor (ver abajo). |
 | `supabase start`, `db reset` local, `functions serve` | Entorno local completo. | Sí; no se usarán por ahora. |
+
+`supabase/config.toml` configura **solo el entorno local** (Docker). No cambia `nexo-dev` salvo que se ejecute `supabase config push`, que no se usará sin revisarlo antes.
 
 ### Cómo se ejecutarán las pruebas pgTAP sin Docker
 1. Primero se comprobará si la versión instalada de la CLI permite ejecutar `supabase test db` contra el proyecto enlazado sin Docker.
@@ -83,6 +86,7 @@ Las versiones exactas de Supabase CLI, Deno y librerías se fijarán al instalar
 - **Instalación de la Supabase CLI (decidido el 2026-10-23):** como dependencia de desarrollo del proyecto con npm (`npm install supabase --save-dev`) y uso mediante `npx supabase ...`. Requiere Node.js 20 o superior; la máquina tiene Node.js 24.
   - Ventaja: la versión queda fijada en `package.json` y `package-lock.json`, así que el equipo y CI usan la misma.
   - Se descartaron Scoop (instalación global, versión no registrada en el proyecto) y `npx` sin instalar (descarga cada vez, versión variable).
+  - **Instalada el 2026-10-23: versión 2.120.0, fijada exacta.** Se eligió la última versión estable con más de dos semanas publicada (6 de octubre); la 2.122.0 salió el mismo día de la instalación. Para actualizar, cambiar la versión en `package.json`, reinstalar y repetir las comprobaciones de la tabla anterior.
 - **Ubicación del proyecto (decidido el 2026-10-23):** se mueve de OneDrive a `C:\dev\nexo`. La sincronización de OneDrive interfiere con `node_modules`, la caché de Deno y los archivos temporales de la CLI. La copia en la nube la dará GitHub cuando exista la cuenta.
 - Se reemplazan pytest, pytest-django, Ruff y Docker Compose propio como herramientas del MVP.
 

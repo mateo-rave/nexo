@@ -1,0 +1,11 @@
+{
+  "name": "nexo",
+  "private": true,
+  "description": "Backend de Nexo sobre Supabase (migraciones, pruebas y Edge Functions).",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "supabase": "2.120.0"
+  }
+}
