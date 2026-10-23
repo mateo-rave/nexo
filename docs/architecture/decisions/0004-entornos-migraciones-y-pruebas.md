@@ -74,14 +74,16 @@ Producción nunca se usa para pruebas ni para ejecutar `db reset`.
 | Flujo completo | Playwright cuando el frontend de Stitch esté integrado. | Frontend en el repositorio. |
 | Lint y formato | `deno fmt`, `deno lint`; `supabase db lint` para PL/pgSQL; Security/Performance Advisors. | Deno / CLI; Advisors desde el dashboard. |
 
-Las versiones exactas de Supabase CLI, Deno y librerías se fijarán al instalarlas, verificando su compatibilidad.
+Las versiones exactas de Supabase CLI, Deno y librerías se fijarán al instalarlas, verificando su compatibilidad. La de Supabase CLI queda en `package.json`.
 
 ## Consecuencias
 - Hasta instalar Docker, las pruebas de base de datos dependen del proyecto remoto de desarrollo y, más adelante, de CI.
 - El ciclo de prueba es más lento que en local: cada cambio se sube por red.
 - El proyecto remoto es compartido. Si dos personas trabajan a la vez, sus datos de prueba pueden mezclarse. Por eso las pruebas crean sus propios datos y los deshacen con `rollback`.
-- La Supabase CLI sigue siendo necesaria. Su instalación es una dependencia que se aprobará en su momento, eligiendo el método según lo disponible: binario, gestor de paquetes o `npx` con Node.js.
-- La carpeta del proyecto está dentro de OneDrive; la sincronización puede interferir con `node_modules`, caché de Deno y archivos temporales de la CLI. Se recomienda moverla fuera de OneDrive.
+- **Instalación de la Supabase CLI (decidido el 2026-10-23):** como dependencia de desarrollo del proyecto con npm (`npm install supabase --save-dev`) y uso mediante `npx supabase ...`. Requiere Node.js 20 o superior; la máquina tiene Node.js 24.
+  - Ventaja: la versión queda fijada en `package.json` y `package-lock.json`, así que el equipo y CI usan la misma.
+  - Se descartaron Scoop (instalación global, versión no registrada en el proyecto) y `npx` sin instalar (descarga cada vez, versión variable).
+- **Ubicación del proyecto (decidido el 2026-10-23):** se mueve de OneDrive a `C:\dev\nexo`. La sincronización de OneDrive interfiere con `node_modules`, la caché de Deno y los archivos temporales de la CLI. La copia en la nube la dará GitHub cuando exista la cuenta.
 - Se reemplazan pytest, pytest-django, Ruff y Docker Compose propio como herramientas del MVP.
 
 ## Cómo se verificará

@@ -6,17 +6,21 @@ Estado: provisional. Escenario objetivo: Supabase (backend) + Vercel (frontend).
 | Herramienta | Para qué | Estado en la máquina actual (2026-10-23) |
 |---|---|---|
 | Git | Control de versiones | Instalado |
-| Supabase CLI | Migraciones, entorno local, pruebas pgTAP, tipos, despliegue de Edge Functions | No instalado |
-| Docker Desktop (con WSL 2 en Windows) | `supabase start`, `db reset`, `test db` y `functions serve` locales | No instalado |
+| Supabase CLI | Migraciones, entorno local, pruebas pgTAP, tipos, despliegue de Edge Functions | No instalado; se instalará con npm como dependencia del proyecto |
+| Docker Desktop (con WSL 2 en Windows) | `supabase start`, `db reset`, `test db` y `functions serve` locales | No instalado (no se usará por ahora) |
 | Deno | Edge Functions, sus pruebas y pruebas de API | No instalado |
-| Node.js | Posible instalación de la CLI con `npx`; herramientas del frontend de Stitch | No verificado |
-| Cuenta de Supabase | Proyectos de desarrollo y producción | No configurada |
+| Node.js | Ejecutar la Supabase CLI con `npx`; herramientas del frontend de Stitch | Instalado (v24) |
+| Cuenta de Supabase | Proyectos de desarrollo y producción | Creada; proyecto `nexo-dev` creado por el propietario |
 | Cuenta de Vercel | Despliegue del frontend | No configurada |
-| GitHub | Repositorio y CI | Repositorio aún no inicializado |
+| GitHub | Repositorio remoto y CI | Cuenta no configurada; repositorio Git local con historial |
 
 No presuponer que estas herramientas están disponibles: comprobarlas antes de cada tarea que las requiera. Las versiones se fijan al instalar, verificando compatibilidad.
 
-> La carpeta del proyecto está dentro de OneDrive. Se recomienda moverla fuera (p. ej. `C:\dev\nexo`) para evitar conflictos de sincronización con `node_modules`, la caché de Deno y archivos temporales de la CLI.
+> **Ubicación del proyecto:** `C:\dev\nexo`, fuera de OneDrive (decisión del 2026-10-23), para evitar conflictos de sincronización con `node_modules`, la caché de Deno y los archivos temporales de la CLI.
+
+**Supabase CLI:** se instala dentro del proyecto con `npm install supabase --save-dev` y se ejecuta con `npx supabase <comando>`.
+
+**Comandos interactivos:** `npx supabase login` abre el navegador y `npx supabase link` pide la contraseña de la base de datos. Los ejecuta **el propietario en su propia terminal**, para que la contraseña no pase por ningún chat ni registro.
 
 ## Desarrollo (flujo vigente: proyecto en la nube, sin Docker)
 Decisión del 2026-10-23 (ADR-0004). Las cuentas y el proyecto **aún no existen**.
