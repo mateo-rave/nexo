@@ -18,17 +18,25 @@ No presuponer que estas herramientas están disponibles: comprobarlas antes de c
 
 > La carpeta del proyecto está dentro de OneDrive. Se recomienda moverla fuera (p. ej. `C:\dev\nexo`) para evitar conflictos de sincronización con `node_modules`, la caché de Deno y archivos temporales de la CLI.
 
-## Desarrollo local
-**Con Docker (recomendado):**
-1. `supabase start` levanta PostgreSQL, Auth, Data API y demás servicios.
-2. `supabase db reset` aplica migraciones y `supabase/seed.sql`.
-3. `supabase test db` ejecuta pgTAP.
-4. `supabase functions serve` sirve Edge Functions localmente.
+## Desarrollo (flujo vigente: proyecto en la nube, sin Docker)
+Decisión del 2026-10-23 (ADR-0004). Las cuentas y el proyecto **aún no existen**.
 
-**Sin Docker:**
-- Usar un proyecto Supabase dedicado a desarrollo; aplicar migraciones con la CLI enlazada a ese proyecto.
-- Ejecutar las pruebas en CI.
-- Verificar qué comandos de la CLI funcionan sin Docker antes de documentarlos como flujo oficial.
+**Lo hace el propietario, manualmente:**
+1. Crear la cuenta de Supabase.
+2. Crear un proyecto exclusivo para desarrollo, por ejemplo `nexo-dev`.
+3. Guardar la contraseña de la base de datos en un gestor de contraseñas.
+4. Copiar la URL y las claves al `.env` local, sin compartirlas en el chat ni en Git.
+
+**Ciclo de trabajo, con la CLI instalada:**
+1. `supabase migration new <nombre>` crea el archivo de la migración.
+2. Se escribe el SQL en ese archivo y se revisa.
+3. `supabase db push --dry-run` muestra lo que se aplicaría al proyecto de desarrollo.
+4. `supabase db push` lo aplica.
+5. Se ejecutan las pruebas pgTAP (método según ADR-0004).
+6. Se revisa el Security Advisor del dashboard.
+7. Se guarda en Git.
+
+**Con Docker (futuro, opcional):** `supabase start`, `supabase db reset`, `supabase test db` y `supabase functions serve` en local.
 
 Credenciales en `.env` local, nunca en Git. `.env.example` solo documenta nombres y valores ilustrativos.
 

@@ -1,8 +1,10 @@
 # ADR-0003: Separación entre Data API, SQL y Edge Functions
 
-- Estado: Propuesta
-- Fecha: 2026-10-23
+- Estado: Aceptada (provisional)
+- Fecha: 2026-10-23 (propuesta y aceptación provisional)
 - Responsables: propietario del producto
+
+> **En pocas palabras:** el frontend solo muestra y pide cosas; las reglas importantes viven en la base de datos (tablas protegidas, funciones SQL y triggers); las Edge Functions se reservan para lo que necesite secretos o servicios externos, que en el MVP casi no existe. "Provisional" significa que se aplica desde ya, pero se revisará cuando tengamos el código de Stitch y experiencia real con las primeras funciones SQL.
 
 ## Contexto
 Con Supabase, la lógica puede vivir en cuatro lugares: el frontend, la Data API (PostgREST sobre tablas con RLS), funciones SQL/triggers y Edge Functions (TypeScript/Deno). Sin un criterio explícito la lógica se dispersa, se duplica o termina en React, donde cualquier usuario puede saltársela.
@@ -27,7 +29,7 @@ Opción 3, con estas reglas:
 
 ### Justificación aplicada al motor de automatización
 - **Evaluación de reglas y acciones internas en SQL.** En el MVP las acciones permitidas (crear tarea, crear notificación, cambiar estado, crear hallazgo) son escrituras en la misma base de datos. Ejecutarlas en una transacción SQL junto con el registro de la ejecución garantiza que no quede una acción aplicada sin su registro ni un registro "exitoso" sin su acción. La idempotencia se impone con restricciones `unique`, que solo la base de datos garantiza bajo concurrencia.
-- **Acciones con efectos externos en Edge Functions.** Si una regla debe enviar un correo, la transacción SQL registra la acción como `scheduled`; una Edge Function la procesa, aplica timeout y reintentos limitados y la marca como `completed` o `failed`. Así se diferencia acción programada de acción completada.
+- **Acciones con efectos externos en Edge Functions (posterior al MVP).** Las integraciones externas quedaron fuera del MVP; este diseño se documenta para que el modelo de datos no lo impida más adelante. Si una regla debe enviar un correo, la transacción SQL registra la acción como `scheduled`; una Edge Function la procesa, aplica timeout y reintentos limitados y la marca como `completed` o `failed`. Así se diferencia acción programada de acción completada.
 - **Detección de bloqueos en SQL.** Detectar tareas vencidas o sin actividad es una consulta sobre conjuntos de filas; hacerlo en SQL evita transferir datos y permite insertar hallazgos con `on conflict do nothing` sobre una clave de deduplicación.
 
 ### Convenciones

@@ -42,5 +42,6 @@ No afirmes que una funcionalidad está implementada ni que una prueba pasó si n
 - `docs/qa/`: estrategia de pruebas.
 - `docs/security/`: modelo inicial de amenazas y matriz de roles y permisos.
 - `docs/operations/`: notas iniciales de despliegue, respaldos y recuperación.
+- `docs/plans/`: planes de cada fase de implementación.
 
 El contenido es una base de trabajo y debe evolucionar conforme se validen los requisitos y se tomen decisiones técnicas.
