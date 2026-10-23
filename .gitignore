@@ -1,0 +1,79 @@
+# Secretos y variables locales
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Django y bases locales
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Pruebas y cobertura
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Herramientas de calidad
+.ruff_cache/
+.mypy_cache/
+.pytype/
+
+# Logs y temporales
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# Node.js y frontend futuro
+node_modules/
+dist/
+build/
+.npm/
+
+# Configuración local de editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Datos locales de contenedores/DB
+postgres_data/
+pgdata/
+
+# Variables de entorno de pruebas que incluyan datos locales
+.env.test.local
+
+# Supabase CLI (estado local; las migraciones y tests sí se versionan)
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+supabase/functions/.env
+
+# Deno y Vercel
+.deno/
+.vercel/
