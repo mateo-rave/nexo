@@ -12,7 +12,7 @@ Estado: provisional. Escenario objetivo: Supabase (backend) + Vercel (frontend).
 | Node.js | Ejecutar la Supabase CLI con `npx`; herramientas del frontend de Stitch | Instalado (v24) |
 | Cuenta de Supabase | Proyectos de desarrollo y producción | Creada; proyecto `nexo-dev` creado por el propietario |
 | Cuenta de Vercel | Despliegue del frontend | No configurada |
-| GitHub | Repositorio remoto y CI | Cuenta no configurada; repositorio Git local con historial |
+| GitHub | Repositorio remoto y CI | Cuenta creada (correo `noreply` configurado en el repositorio local). Falta crear el repositorio privado y configurar el remoto |
 
 No presuponer que estas herramientas están disponibles: comprobarlas antes de cada tarea que las requiera. Las versiones se fijan al instalar, verificando compatibilidad.
 
@@ -43,6 +43,28 @@ Decisión del 2026-10-23 (ADR-0004). La cuenta de Supabase y el proyecto `nexo-d
 **Con Docker (futuro, opcional):** `supabase start`, `supabase db reset`, `supabase test db` y `supabase functions serve` en local.
 
 Credenciales en `.env` local, nunca en Git. `.env.example` solo documenta nombres y valores ilustrativos.
+
+## Pruebas de base de datos en GitHub Actions
+Con la CLI 2.120.0, `supabase test db` necesita Docker incluso con `--linked` (ADR-0004). Como no instalamos Docker en el ordenador de desarrollo, las pruebas pgTAP se ejecutan en GitHub, cuyos servidores Ubuntu ya traen Docker.
+
+**Workflow:** `.github/workflows/pruebas-base-datos.yml`, job `pgtap`. Se ejecuta en cada *pull request*, en cada *push* a `main` y a mano desde la pestaña Actions (`workflow_dispatch`).
+
+**Qué hace, paso a paso:**
+1. `actions/checkout` descarga el repositorio (sin dejar guardado el token de GitHub).
+2. `actions/setup-node` prepara Node.js 24.
+3. `npm ci` instala la CLI exactamente en la versión de `package-lock.json`.
+4. `npx supabase --version` deja constancia de la versión usada.
+5. `npx supabase start` crea un Supabase local y vacío **dentro del servidor de GitHub** y le aplica `supabase/migrations/` en orden.
+6. `npx supabase test db --local` ejecuta los archivos de `supabase/tests/` con pgTAP.
+
+Al terminar, GitHub destruye el servidor y la base de datos con él.
+
+**Lo que no hace:** no usa `--linked`, `db push`, `db reset` contra un proyecto remoto, `SUPABASE_ACCESS_TOKEN`, la contraseña de `nexo-dev` ni ningún otro secreto. Sus permisos son solo de lectura del repositorio (`contents: read`).
+
+**Cómo leer el resultado:** en el registro del paso "Ejecutar las pruebas pgTAP":
+- **Éxito:** cada archivo termina en `.. ok` y al final aparecen `All tests successful.`, `Files=6, Tests=101` y `Result: PASS`. El job se marca en verde.
+- **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
+- Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
 ## Entornos
 - **Local:** Supabase CLI, datos sintéticos, claves locales generadas por la CLI.

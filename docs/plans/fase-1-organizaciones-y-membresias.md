@@ -1,6 +1,6 @@
 # Fase 1 — Organizaciones, membresías y seguridad base
 
-- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos (5 en parte: falta verificar los comandos remotos tras `link`). Paso 1 de implementación hecho (`supabase init`). Aún no se ha escrito SQL.
+- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus pruebas pgTAP están preparadas para GitHub Actions, pero todavía no se han ejecutado.
 - Fecha: 2026-10-23
 - Referencias: [ADR-0002](../architecture/decisions/0002-autenticacion-y-autorizacion-multiempresa.md), [ADR-0004](../architecture/decisions/0004-entornos-migraciones-y-pruebas.md), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md).
 
@@ -186,19 +186,18 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
 
 ## Pasos de implementación (cuando se apruebe)
 1. **Estructura:** `supabase init` crea `supabase/config.toml` y las carpetas `migrations/` y `tests/`. Requiere la CLI.
-2. **Migración 1 — esquema base:**
-   - esquema `privado`;
-   - tipo de rol;
+> **Cambio del 2026-10-24 (aprobado por el propietario):** las migraciones 1, 2 y la parte de `crear_organizacion` de la 3 se unen en una sola, `20261024161000_esquema_base_organizaciones.sql`. Motivo: una tabla sin sus políticas y permisos no se puede probar, y aplicarlas por separado deja un momento en el que existen sin protección completa. Las funciones de gestión de miembros pasan a la migración siguiente.
+
+2. **Migración 1 — esquema base y seguridad (aplicada en `nexo-dev` el 2026-10-24):**
+   - permisos por defecto retirados a `anon` y `authenticated`;
+   - esquema `privado` y tipo `rol_membresia`;
    - las cuatro tablas con sus restricciones e índices;
-   - RLS activado;
-   - permisos revocados a `anon`.
-3. **Migración 2 — permisos:** funciones auxiliares y políticas RLS.
-4. **Migración 3 — operaciones:**
-   - trigger de perfiles;
-   - trigger de "siempre un propietario";
-   - funciones RPC;
-   - auditoría.
-5. **Pruebas:** los archivos pgTAP de la tabla anterior.
+   - funciones auxiliares y políticas RLS;
+   - triggers: perfil al registrarse, `actualizado_en`, siempre un propietario, `organizacion_id` inmutable, auditoría inmutable y auditoría del cambio de nombre;
+   - RPC `crear_organizacion`.
+3. **Migración 2 — gestión de miembros:** `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `salir_de_organizacion`, con su auditoría.
+4. *(Unido a los pasos 2 y 3.)*
+5. **Pruebas:** los archivos pgTAP de la tabla anterior. Preparados para la migración 1: `rls_activado`, `perfiles`, `organizaciones`, `membresias`, `crear_organizacion` y `auditoria`. `gestion_miembros` se escribirá con la migración 2.
 6. **Aplicar y verificar en `nexo-dev`:**
    - `db push --dry-run` y luego `db push`;
    - ejecutar las pruebas;

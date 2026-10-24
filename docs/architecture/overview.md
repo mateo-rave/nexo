@@ -70,7 +70,7 @@ Esquemas de PostgreSQL:
 ## Multiempresa
 - Cada tabla de negocio tiene `organizacion_id not null`.
 - Las tablas hijas usan clave foránea compuesta `(organizacion_id, padre_id)` para que la base de datos impida relaciones entre organizaciones.
-- RLS habilitado en todas las tablas expuestas; políticas por operación basadas en `membresias` y `auth.uid()`.
+- RLS habilitado en todas las tablas expuestas; políticas por operación basadas en `membresias` y `auth.uid()`. Cada migración lo activa explícitamente: el RLS automático que tiene `nexo-dev` (`rls_auto_enable`, fuera del repositorio) no se considera una protección. Detalle en ADR-0004.
 - Un `organizacion_id` enviado por el cliente nunca es prueba de autorización: se valida contra la membresía.
 - Las funciones de sistema (cron) operan sobre todas las organizaciones, pero cada fila que crean hereda el `organizacion_id` del recurso que la originó.
 

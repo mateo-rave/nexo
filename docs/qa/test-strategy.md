@@ -112,9 +112,9 @@ Comprobaciones globales:
 Las versiones se fijarán al instalar cada herramienta, verificando compatibilidad.
 
 ### Sin Docker local (situación vigente)
-- Las pruebas pgTAP y de integración se ejecutan contra el proyecto Supabase **de desarrollo**, nunca producción, y en CI cuando exista GitHub.
+- Las pruebas pgTAP se ejecutan en CI (ver abajo). Las de integración de API se ejecutarán contra el proyecto Supabase **de desarrollo** o en CI, nunca contra producción.
 - Las pruebas pgTAP se envuelven en `begin; ... rollback;` para no dejar datos.
-- Si la CLI no permite ejecutar `supabase test db` contra el proyecto remoto sin Docker, los archivos se ejecutan en el SQL Editor del proyecto de desarrollo y el resultado se anota indicando dónde se ejecutó.
+- `supabase test db --linked` necesita Docker (comprobado el 2026-10-24). Por eso las pruebas pgTAP se ejecutan en GitHub Actions contra un Supabase local y desechable creado a partir de las migraciones (`.github/workflows/pruebas-base-datos.yml`, ver ADR-0004), y el resultado se anota indicando dónde se ejecutó.
 - Las pruebas unitarias de Edge Functions solo necesitan Deno.
 
 ## Reglas de calidad

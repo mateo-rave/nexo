@@ -1,0 +1,56 @@
+# Ejecuta las pruebas pgTAP de supabase/tests/ contra un Supabase local y
+# desechable, creado en el servidor de GitHub a partir de las migraciones del
+# repositorio. No se conecta a nexo-dev ni a ningún proyecto remoto: no usa
+# --linked, db push ni secretos. Ver ADR-0004.
+name: Pruebas de base de datos
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Solo lectura del repositorio: el job no publica nada.
+permissions:
+  contents: read
+
+# Si llega un cambio nuevo a la misma rama, se cancela la ejecución anterior.
+concurrency:
+  group: pruebas-base-datos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pgtap:
+    name: pgTAP en Supabase local
+    # Los servidores Ubuntu de GitHub ya traen Docker, que necesita la CLI.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      # Acciones fijadas por SHA de commit (no por etiqueta) para que nadie
+      # pueda cambiar su código sin que lo notemos.
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      # Instala exactamente la versión de la CLI fijada en package-lock.json.
+      - name: Instalar la CLI de Supabase
+        run: npm ci
+
+      - name: Comprobar la versión de la CLI
+        run: npx supabase --version
+
+      # Crea la base de datos local y aplica supabase/migrations/ en orden.
+      - name: Levantar Supabase local y aplicar las migraciones
+        run: npx supabase start
+
+      # --local deja explícito que nunca se prueba contra un proyecto remoto.
+      - name: Ejecutar las pruebas pgTAP
+        run: npx supabase test db --local

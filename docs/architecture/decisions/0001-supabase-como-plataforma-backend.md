@@ -3,7 +3,7 @@
 - Estado: Aceptada
 - Fecha: 2026-10-23 (propuesta y aceptación)
 
-Nota: la decisión de plataforma es firme para el MVP. Siguen sin verificar el código que generará Stitch, los planes y las cuentas (aún no existen); si esa verificación obliga a cambiar la decisión, se hará con una nueva ADR.
+Nota: la decisión de plataforma es firme para el MVP. Al tomarla no existían todavía las cuentas. Actualización del 2026-10-24: ya existen la cuenta de Supabase (con el proyecto de desarrollo `nexo-dev`) y la de GitHub, aunque el remoto de GitHub sigue sin configurarse. Siguen sin verificar el código que generará Stitch y los planes; si esa verificación obliga a cambiar la decisión, se hará con una nueva ADR.
 - Responsables: propietario del producto
 
 ## Contexto

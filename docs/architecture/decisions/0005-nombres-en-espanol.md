@@ -112,6 +112,29 @@ Si se necesita un nombre nuevo, se añade aquí antes de usarlo.
 | `membership.added`, `membership.role_changed` | `miembro.agregado`, `miembro.rol_cambiado` |
 | `membership.removed`, `membership.left` | `miembro.quitado`, `miembro.salio` |
 
+### Añadidos con la migración de esquema base (2026-10-24)
+| Elemento | Nombre oficial |
+|---|---|
+| Tipo enumerado de roles | `rol_membresia` |
+| Función: ¿comparto alguna organización con este usuario? | `privado.tiene_organizacion_en_comun(usuario_id)` |
+| Trigger: actualizar `actualizado_en` | `privado.asignar_actualizado_en()` |
+| Trigger: crear el perfil al registrarse | `privado.crear_perfil()` |
+| Trigger: siempre al menos un propietario | `privado.exigir_propietario()` |
+| Trigger: bloquear cambio de `organizacion_id` | `privado.impedir_cambio_organizacion_id()` |
+| Trigger: auditoría de solo inserción | `privado.impedir_cambios_auditoria()` |
+| Trigger: auditar el cambio de nombre | `privado.auditar_organizacion_actualizada()` |
+| Valores de `tipo_recurso` | `organizacion`, `membresia` |
+| Claves de `detalles` | `nombre`, `nombre_anterior`, `nombre_nuevo`, `rol` |
+| Dato que envía el frontend al registrarse (`options.data`) | `nombre_visible` |
+| Códigos de error propios (campo `details` de la respuesta) | `sesion_requerida`, `nombre_invalido`, `perfil_inexistente`, `ultimo_propietario`, `auditoria_inmutable`, `organizacion_inmutable` |
+| Workflow de GitHub Actions para pgTAP | `.github/workflows/pruebas-base-datos.yml` (nombre visible "Pruebas de base de datos", job `pgtap`) |
+
+**Convenciones de código SQL:**
+- Parámetros de función con prefijo `p_` (`p_nombre`) y variables con `v_` (`v_usuario_id`), para no confundirlos con columnas del mismo nombre.
+- Triggers: `<tabla>_<que_hace>` (`membresias_exigir_propietario`).
+- Índices: `<tabla>_<columnas>_indice`. Restricciones `check`: `<tabla>_<columna>_valido`.
+- Los nombres automáticos de PostgreSQL para claves primarias y foráneas (`_pkey`, `_fkey`) se aceptan como impuestos por la herramienta.
+
 ### Usuarios de prueba
 `propietario_a`, `administrador_a`, `miembro_a`, `propietario_b`, `sin_membresia` y el visitante anónimo (`anon`).
 
