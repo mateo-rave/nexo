@@ -43,7 +43,7 @@ Cada archivo de prueba:
 2. **Vía elegida: GitHub Actions.** El workflow `.github/workflows/pruebas-base-datos.yml` levanta en el servidor de GitHub un Supabase **local y desechable**, le aplica `supabase/migrations/` y ejecuta `npx supabase test db --local`. No toca `nexo-dev` ni usa credenciales. Detalle en `docs/operations/development-and-backups.md`.
    - **Validado el 2026-10-24** en la ejecución `40117625548` (`workflow_dispatch`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`). El registro muestra los seis archivos de `supabase/tests/` con `ok`, `All tests successful.`, `Files=6, Tests=101` y `Result: PASS`.
    - La ejecución anterior `40115395090` (`push`, mismo commit) figura como `success`, pero GitHub no conserva sus registros ni sus pasos. **No cuenta como evidencia.**
-   - Estas pruebas validan solo lo que cubren: aislamiento entre organizaciones, permisos, triggers y `crear_organizacion` de la migración 1, contra una base local. No sustituyen las comprobaciones pendientes en `nexo-dev`: registro real con Supabase Auth y revisión del Security Advisor.
+   - Estas pruebas validan solo lo que cubren: aislamiento entre organizaciones, permisos, triggers y `crear_organizacion` de la migración 1, contra una base local. No sustituyen las comprobaciones en `nexo-dev`. El registro y el borrado reales con Supabase Auth (V3) se verificaron el 2026-10-24 (detalle en `docs/operations/development-and-backups.md`); la revisión del Security Advisor sigue pendiente.
 3. Se descartó por ahora el SQL Editor: solo muestra el resultado de la última instrucción (`rollback`), así que habría que adaptar los archivos de prueba para ver los resultados de pgTAP.
 
 ### Reglas para el proyecto remoto de desarrollo

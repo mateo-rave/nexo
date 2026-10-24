@@ -73,7 +73,14 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
   - `no files matched pattern: supabase/seed.sql`;
   - límites de descarga (`toomanyrequests`) de `public.ecr.aws`, que la CLI resolvió descargando de `ghcr.io`.
 - La ejecución por *push* `40115395090` (mismo commit) figura como `success`, pero sin registros ni pasos accesibles. **No se usa como evidencia.**
-- Estas pruebas se ejecutan contra la base local y desechable, no contra `nexo-dev`. Siguen pendientes, en `nexo-dev`, el registro real con Supabase Auth y la revisión del Security Advisor.
+- Estas pruebas se ejecutan contra la base local y desechable, no contra `nexo-dev`.
+
+**Comprobación en `nexo-dev` del registro con Supabase Auth (V3, 2026-10-24):**
+- Se creó desde el Dashboard el usuario sintético `prueba-v3@example.com`, con "Auto Confirm User".
+- Una consulta de solo lectura (`npx supabase db query --linked`) confirmó su perfil, con `nombre_visible = 'Usuario'` y 0 membresías.
+- Tras borrarlo desde el Dashboard, otra consulta de solo lectura confirmó 0 cuentas, 0 perfiles y 0 membresías residuales.
+- **Límites:** no cubre el envío de `nombre_visible` desde el frontend y no valida la aplicación completa.
+- **Sigue pendiente** la revisión del Security Advisor de `nexo-dev`.
 
 ## Entornos
 - **Local:** Supabase CLI, datos sintéticos, claves locales generadas por la CLI.
