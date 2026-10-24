@@ -117,10 +117,10 @@ No se modificaron funciones, permisos, políticas ni triggers a raíz de ninguna
   - las cuatro tienen `search_path` vacío;
   - `authenticated` puede ejecutarlas y `anon` no, y el Advisor no las marca para `anon`;
   - las dos funciones auxiliares de `privado` no son ejecutables por ninguno de los dos roles.
-- **Evidencia de comportamiento:** solo las pruebas pgTAP en la base desechable de CI (`40132365624`, `Files=11, Tests=199`, `Result: PASS`).
-  - **Las pruebas de integración a través de la API están escritas (`pruebas/api/`, 40 casos), pero aún no se han ejecutado.** Las RPC no se han llamado en `nexo-dev` ni con `supabase-js`.
-  - Los códigos HTTP reales y los mensajes devueltos por PostgREST están sin comprobar.
-- **Decisión provisional:** mantener el acceso de `authenticated` y registrar los avisos. Revisar la decisión cuando existan las pruebas de API.
+- **Evidencia de comportamiento:** pruebas pgTAP y pruebas de integración a través de la API (`pruebas/api/`, 40 casos), ejecución `40134690914`, commit `46b4b629ef914bbe38b79e875b31b88c18eea250`, en el Supabase local y desechable de GitHub Actions: pgTAP `Files=11, Tests=199`, `Result: PASS`; API `ok | 40 passed | 0 failed`.
+  - Las pruebas de API comprueban, con la clave publicable y la sesión de cada usuario, el estado HTTP real, `code`, `message` y `details` de cada respuesta, y que los rechazos no cambian membresías ni auditoría. Sin sesión, `anon` recibe HTTP 401 con `42501` (no tiene `execute`).
+  - **Límite:** se ejecutaron en el Supabase local y desechable de CI, no en `nexo-dev`. Todavía no hay pruebas de API contra la base remota.
+- **Decisión provisional:** mantener el acceso de `authenticated` y registrar los avisos. Las pruebas de API respaldan el diseño en el entorno de CI; revisar la decisión si cambia la evidencia.
 
 ### Alcance de esta revisión
 El Advisor comprueba patrones de configuración, no la lógica de las políticas (por ejemplo, el aislamiento entre organizaciones, que cubren las pruebas pgTAP). La salida de la CLI no incluyó avisos sobre la configuración de Auth; esa revisión se hizo aparte, desde el Dashboard (ver la sección siguiente). Que solo aparezcan estos siete avisos **no significa que no existan otros riesgos**.
@@ -147,13 +147,13 @@ El propietario revisó las opciones de autenticación en el Dashboard de Supabas
   - los requisitos adicionales de caracteres de las contraseñas, que no pudieron verificarse.
 
 ## Gestión de miembros (migración 2 de la fase 1)
-Estado: **implementada; pruebas pgTAP aprobadas en CI; aplicada en `nexo-dev` el 2026-10-24; pruebas de integración a través de la API escritas, sin ejecutar**. Migración `20261024194726_gestion_miembros.sql`.
+Estado: **implementada; pruebas pgTAP aprobadas en CI; aplicada en `nexo-dev` el 2026-10-24; pruebas de integración a través de la API aprobadas en CI, no ejecutadas contra `nexo-dev`**. Migración `20261024194726_gestion_miembros.sql`.
 - **Evidencia:**
-  - **CI:** primera aprobación en la ejecución `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`. La última es la `40132365624`, commit `681d0215555298fb9e6d388d81329a1e786d21d8`. En ambas se aplicaron las migraciones 1 y 2 en un Supabase **local y desechable** de CI, con resultado `Files=11, Tests=199`, `Result: PASS`.
+  - **CI:** primera aprobación en la ejecución `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`. La última es la `40134690914`, commit `46b4b629ef914bbe38b79e875b31b88c18eea250`, que ejecutó además las 40 pruebas de API (`ok | 40 passed | 0 failed`). En ambas se aplicaron las migraciones 1 y 2 en un Supabase **local y desechable** de CI, con resultado `Files=11, Tests=199`, `Result: PASS`.
   - **`nexo-dev`:** la aplicación y la existencia de las seis funciones, con sus permisos, están verificadas (detalle en `docs/operations/development-and-backups.md`).
 - **Lo que no valida:**
   - el comportamiento de las RPC al llamarlas en `nexo-dev`;
-  - los códigos HTTP reales a través de la API, porque las pruebas de integración con `supabase-js` aún no se han ejecutado;
+  - los códigos HTTP reales a través de la API **en `nexo-dev`**: las pruebas de integración con `supabase-js` pasaron en el Supabase local de CI (`40134690914`, 40 de 40), pero no se han ejecutado contra la base remota;
   - las operaciones simultáneas (ver "Lo que no prueba pgTAP", más abajo).
 
 **Controles:**
@@ -184,7 +184,7 @@ Estado: **implementada; pruebas pgTAP aprobadas en CI; aplicada en `nexo-dev` el
 
 ## Riesgos residuales y asuntos pendientes
 - Gestión de miembros: D6 (un propietario puede quitar a otro), D7 (rechazos sin auditoría), D8 (sin límite de intentos en `agregar_miembro`) y el posible bloqueo mutuo al borrar la cuenta de un propietario (ver "Gestión de miembros").
-- Pruebas de integración de las RPC de gestión de miembros a través de la API (`supabase-js`): escritas en `pruebas/api/`, pendientes de su primera ejecución en CI.
+- Pruebas de integración de las RPC de gestión de miembros a través de la API: aprobadas en el Supabase local de CI (`40134690914`); pendiente decidir si y cómo probarlas contra `nexo-dev`.
 - Antes de un lanzamiento público: evaluar CAPTCHA, la protección contra contraseñas filtradas y los requisitos adicionales de caracteres de las contraseñas (ver "Revisión de la configuración de Auth de `nexo-dev`").
 - `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").
 - Permiso `execute` de `anon` y `authenticated` sobre `public.rls_auto_enable()`, configuración externa al repositorio: confirmar su procedencia y gestión antes de decidir si se retira.

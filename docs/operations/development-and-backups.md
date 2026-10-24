@@ -54,7 +54,7 @@ Con la CLI 2.120.0, `supabase test db` necesita Docker incluso con `--linked` (A
 2. `actions/setup-node` prepara Node.js 24.
 3. `npm ci` instala la CLI exactamente en la versión de `package-lock.json`.
 4. `npx supabase --version` deja constancia de la versión usada.
-5. `npx supabase start` crea un Supabase local y vacío **dentro del servidor de GitHub** y le aplica `supabase/migrations/` en orden.
+5. `npx supabase start` crea un Supabase local y vacío **dentro del servidor de GitHub** y le aplica `supabase/migrations/` en orden. Su salida va a un archivo temporal del runner, porque incluye las claves de ese Supabase local: si va bien solo se muestran las líneas `Applying migration ...`, y si falla, un diagnóstico saneado.
 6. `npx supabase test db --local` ejecuta los archivos de `supabase/tests/` con pgTAP.
 7. `denoland/setup-deno` instala Deno 2.9.8, y `deno check --frozen` descarga `supabase-js`, comprueba sus hashes contra `pruebas/api/deno.lock` y comprueba los tipos.
 8. `deno test` ejecuta las pruebas de integración de API de `pruebas/api/` contra el mismo Supabase local, con solo la URL local y la clave publicable local (ver `docs/qa/test-strategy.md`).
@@ -68,7 +68,9 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
 - Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
-**Última validación registrada:** ejecución `40132365624` del 2026-10-24 (`push`, commit `681d0215555298fb9e6d388d81329a1e786d21d8`, solo documentación, posterior a la aplicación en `nexo-dev`): se aplicaron las dos migraciones y los once archivos dieron `ok`, `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`. Como todas, se ejecutó contra la base desechable de CI, no contra `nexo-dev`.
+**Última validación registrada:** ejecución `40134690914`, commit `46b4b629ef914bbe38b79e875b31b88c18eea250`, en el Supabase local y desechable de GitHub Actions: pgTAP `Files=11, Tests=199`, `Result: PASS`; API `ok | 40 passed | 0 failed`. Es la primera ejecución de las pruebas de API; ninguna prueba se ejecutó contra `nexo-dev`.
+
+**Validación anterior, posterior a la aplicación en `nexo-dev`:** ejecución `40132365624` del 2026-10-24 (`push`, commit `681d0215555298fb9e6d388d81329a1e786d21d8`, solo documentación, posterior a la aplicación en `nexo-dev`): se aplicaron las dos migraciones y los once archivos dieron `ok`, `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`. Como todas, se ejecutó contra la base desechable de CI, no contra `nexo-dev`.
 
 **Validación previa a la aplicación en `nexo-dev`:** ejecución `40129717008` del 2026-10-24 (`push`, commit `f15b3726b37c7518f62de508780055f264bf24a8`, solo documentación).
 - `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `20261024194726_gestion_miembros.sql`, y `npx supabase test db --local` ejecutó los once archivos, todos con `ok`.

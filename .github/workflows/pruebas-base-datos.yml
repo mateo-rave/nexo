@@ -49,8 +49,33 @@ jobs:
         run: npx supabase --version
 
       # Crea la base de datos local y aplica supabase/migrations/ en orden.
+      # Al terminar, "supabase start" imprime las claves del Supabase local
+      # (incluida una sb_secret_), así que su salida va a un archivo temporal
+      # del runner, que no se sube como artefacto y desaparece con él.
+      # - Si el inicio va bien, solo se muestran las líneas "Applying
+      #   migration <versión>_<nombre>.sql..." (lista de permitidos estricta).
+      # - Si falla, se muestran las últimas líneas saneadas: se descartan
+      #   enteras las que mencionan claves, secretos, contraseñas o tokens, y
+      #   en el resto se ocultan claves sb_, JWT, credenciales de URL y
+      #   cualquier cadena larga. El paso falla con el código real.
       - name: Levantar Supabase local y aplicar las migraciones
-        run: npx supabase start
+        run: |
+          registro="$RUNNER_TEMP/supabase-start.log"
+          if npx supabase start > "$registro" 2>&1; then
+            grep -E '^Applying migration [0-9]{14}_[a-z0-9_]+\.sql\.\.\.$' "$registro" || true
+            echo "Supabase local iniciado correctamente (salida completa omitida: contiene claves locales)."
+          else
+            codigo=$?
+            echo "::error::npx supabase start falló con el código $codigo. Diagnóstico saneado:"
+            grep -v -i -E 'key|secret|password|passwd|token|jwt|anon|service_role|authorization|bearer' "$registro" \
+              | sed -E \
+                  -e 's/sb_(secret|publishable)_[A-Za-z0-9_-]+/sb_\1_[oculto]/g' \
+                  -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]*)?/[jwt oculto]/g' \
+                  -e 's#([A-Za-z][A-Za-z0-9+.-]*://)[^/@[:space:]]+@#\1[credenciales ocultas]@#g' \
+                  -e 's/[A-Za-z0-9+\/=_-]{32,}/[valor oculto]/g' \
+              | tail -n 200
+            exit "$codigo"
+          fi
 
       # --local deja explícito que nunca se prueba contra un proyecto remoto.
       - name: Ejecutar las pruebas pgTAP

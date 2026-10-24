@@ -137,7 +137,8 @@ Decisión del 2026-10-24: Deno + `supabase-js` contra el Supabase local y desech
   - `auxiliares.ts` se niega a continuar si la URL no es `127.0.0.1` o `localhost`, o si la clave no es publicable (`sb_publishable_...`);
   - no se usa `service_role` ni ninguna clave secreta.
 - **Límite de registros:** el Supabase local limita a 30 los registros e inicios de sesión cada 5 minutos por IP (`auth.rate_limit.sign_in_sign_ups`). Hoy se registran como mucho 20 usuarios por ejecución.
-- **Lo que no cubren:** las operaciones simultáneas y el rechazo de `repeatable read`, que no se puede elegir desde la Data API. Siguen cubiertos solo por pgTAP y el razonamiento de ADR-0004.
+- **Primera ejecución (2026-10-24):** ejecución `40134690914`, commit `46b4b629ef914bbe38b79e875b31b88c18eea250`, en el Supabase local y desechable de GitHub Actions: pgTAP `Files=11, Tests=199`, `Result: PASS`; API `ok | 40 passed | 0 failed`.
+- **Lo que no cubren:** las pruebas contra `nexo-dev` (solo se ejecutan en el Supabase local de CI), las operaciones simultáneas y el rechazo de `repeatable read`, que no se puede elegir desde la Data API. Siguen cubiertos solo por pgTAP y el razonamiento de ADR-0004.
 
 ## Reglas de calidad
 - No afirmar que pasó una prueba si no fue ejecutada; indicar dónde se ejecutó.
