@@ -71,13 +71,21 @@ Decisión: RLS es el mecanismo principal de aislamiento (ADR-0002). Requisitos:
 RLS no es la única defensa: se combina con restricciones, triggers y validación en RPC y Edge Functions.
 
 ## Revisión del Security Advisor de `nexo-dev` (2026-10-24)
-Comando: `npx supabase db advisors --linked --type security --level info` (CLI 2.120.0), tras aplicar la migración `20261024161000_esquema_base_organizaciones.sql`. Resultado: **3 avisos `WARN`, ninguno `ERROR` y ninguno `INFO`**. No se modificaron funciones, permisos, políticas ni triggers a raíz de esta revisión.
+Comando: `npx supabase db advisors --linked --type security --level info` (CLI 2.120.0). Se ejecutó dos veces:
+- **Tras la migración 1** (`20261024161000_esquema_base_organizaciones.sql`): **3 avisos `WARN`**, ninguno `ERROR` ni `INFO`.
+- **Tras la migración 2** (`20261024194726_gestion_miembros.sql`, aplicada a las 20:41 UTC): **7 avisos `WARN`**, ninguno `ERROR` ni `INFO`. Siguen los mismos 3 y aparecen 4 nuevos.
 
-| # | Aviso | Objeto | Decisión provisional |
-|---|---|---|---|
-| 1 | `anon_security_definer_function_executable` (0028) | `public.rls_auto_enable()` | Se conserva; aviso registrado. |
-| 2 | `authenticated_security_definer_function_executable` (0029) | `public.crear_organizacion(p_nombre text)` | Intencional; aviso aceptado. |
-| 3 | `authenticated_security_definer_function_executable` (0029) | `public.rls_auto_enable()` | Se conserva; aviso registrado. |
+No se modificaron funciones, permisos, políticas ni triggers a raíz de ninguna de las dos revisiones.
+
+| # | Aviso | Objeto | Desde | Decisión provisional |
+|---|---|---|---|---|
+| 1 | `anon_security_definer_function_executable` (0028) | `public.rls_auto_enable()` | Migración 1 | Se conserva; aviso registrado. |
+| 2 | `authenticated_security_definer_function_executable` (0029) | `public.crear_organizacion(p_nombre text)` | Migración 1 | Intencional; aviso aceptado. |
+| 3 | `authenticated_security_definer_function_executable` (0029) | `public.rls_auto_enable()` | Migración 1 | Se conserva; aviso registrado. |
+| 4 | `authenticated_security_definer_function_executable` (0029) | `public.agregar_miembro(p_organizacion_id uuid, p_correo text, p_rol public.rol_membresia)` | Migración 2 | Intencional por diseño; ver "Avisos 4 a 7". |
+| 5 | `authenticated_security_definer_function_executable` (0029) | `public.cambiar_rol_miembro(p_organizacion_id uuid, p_usuario_id uuid, p_rol public.rol_membresia)` | Migración 2 | Intencional por diseño; ver "Avisos 4 a 7". |
+| 6 | `authenticated_security_definer_function_executable` (0029) | `public.quitar_miembro(p_organizacion_id uuid, p_usuario_id uuid)` | Migración 2 | Intencional por diseño; ver "Avisos 4 a 7". |
+| 7 | `authenticated_security_definer_function_executable` (0029) | `public.salir_de_organizacion(p_organizacion_id uuid)` | Migración 2 | Intencional por diseño; ver "Avisos 4 a 7". |
 
 ### Avisos 1 y 3: `public.rls_auto_enable()`
 - **Qué es:** la función y el event trigger `ensure_rls` del RLS automático de `nexo-dev`, que no están en las migraciones del repositorio (ver ADR-0004, "RLS automático de `nexo-dev`").
@@ -102,11 +110,23 @@ Comando: `npx supabase db advisors --linked --type security --level info` (CLI 2
   - El registro normal de cuentas está **habilitado**. Se confirmó después, en la revisión de Auth desde el Dashboard (ver la sección siguiente).
   - **No existe un límite de organizaciones por usuario.** Los límites de uso y la prevención de creación abusiva son una cuestión de diseño pendiente, no una corrección implementada.
 
+### Avisos 4 a 7: RPC de gestión de miembros
+- **Qué señala el Advisor:** que `authenticated` puede ejecutar estas cuatro funciones `security definer` a través de `/rest/v1/rpc/...`. Es un patrón que conviene revisar, **no una vulnerabilidad confirmada**.
+- **Contexto:** ese acceso es el diseño de la migración 2. Los usuarios no tienen permiso de escritura en `membresias` ni en `auditoria`, así que estas RPC son la única vía para gestionar miembros. Cada una comprueba `auth.uid()` y el rol actual leído de `membresias`, nunca un `organizacion_id` por sí solo (controles en "Gestión de miembros", más abajo).
+- **Verificado en `nexo-dev`** (consulta de solo lectura a `pg_proc`, 2026-10-24):
+  - las cuatro tienen `search_path` vacío;
+  - `authenticated` puede ejecutarlas y `anon` no, y el Advisor no las marca para `anon`;
+  - las dos funciones auxiliares de `privado` no son ejecutables por ninguno de los dos roles.
+- **Evidencia de comportamiento:** solo las pruebas pgTAP en la base desechable de CI (`40132365624`, `Files=11, Tests=199`, `Result: PASS`).
+  - **Las pruebas de integración a través de la API están escritas (`pruebas/api/`, 40 casos), pero aún no se han ejecutado.** Las RPC no se han llamado en `nexo-dev` ni con `supabase-js`.
+  - Los códigos HTTP reales y los mensajes devueltos por PostgREST están sin comprobar.
+- **Decisión provisional:** mantener el acceso de `authenticated` y registrar los avisos. Revisar la decisión cuando existan las pruebas de API.
+
 ### Alcance de esta revisión
-El Advisor comprueba patrones de configuración, no la lógica de las políticas (por ejemplo, el aislamiento entre organizaciones, que cubren las pruebas pgTAP). La salida de la CLI no incluyó avisos sobre la configuración de Auth; esa revisión se hizo aparte, desde el Dashboard (ver la sección siguiente). Que solo aparezcan estos tres avisos **no significa que no existan otros riesgos**.
+El Advisor comprueba patrones de configuración, no la lógica de las políticas (por ejemplo, el aislamiento entre organizaciones, que cubren las pruebas pgTAP). La salida de la CLI no incluyó avisos sobre la configuración de Auth; esa revisión se hizo aparte, desde el Dashboard (ver la sección siguiente). Que solo aparezcan estos siete avisos **no significa que no existan otros riesgos**.
 
 ## Revisión de la configuración de Auth de `nexo-dev` (Dashboard, 2026-10-24)
-El propietario revisó las opciones de autenticación en el Dashboard de Supabase. Es una revisión distinta del Security Advisor de la base de datos (sección anterior) y no cambia sus tres avisos.
+El propietario revisó las opciones de autenticación en el Dashboard de Supabase. Es una revisión distinta del Security Advisor de la base de datos (sección anterior) y no cambia sus avisos.
 
 | Opción | Estado observado |
 |---|---|
@@ -127,9 +147,14 @@ El propietario revisó las opciones de autenticación en el Dashboard de Supabas
   - los requisitos adicionales de caracteres de las contraseñas, que no pudieron verificarse.
 
 ## Gestión de miembros (migración 2 de la fase 1)
-Estado: **implementada; pruebas pgTAP aprobadas en CI; sin aplicar en `nexo-dev`**. Migración `20261024194726_gestion_miembros.sql`.
-- **Evidencia:** ejecución de GitHub Actions `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`. Se aplicaron las migraciones 1 y 2 en un Supabase **local y desechable** de CI y el resultado fue `Files=11, Tests=199`, `Result: PASS`.
-- **Lo que no valida:** el comportamiento en `nexo-dev`, los códigos HTTP reales a través de la API ni las operaciones simultáneas (ver "Lo que no prueba pgTAP", más abajo).
+Estado: **implementada; pruebas pgTAP aprobadas en CI; aplicada en `nexo-dev` el 2026-10-24; pruebas de integración a través de la API escritas, sin ejecutar**. Migración `20261024194726_gestion_miembros.sql`.
+- **Evidencia:**
+  - **CI:** primera aprobación en la ejecución `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`. La última es la `40132365624`, commit `681d0215555298fb9e6d388d81329a1e786d21d8`. En ambas se aplicaron las migraciones 1 y 2 en un Supabase **local y desechable** de CI, con resultado `Files=11, Tests=199`, `Result: PASS`.
+  - **`nexo-dev`:** la aplicación y la existencia de las seis funciones, con sus permisos, están verificadas (detalle en `docs/operations/development-and-backups.md`).
+- **Lo que no valida:**
+  - el comportamiento de las RPC al llamarlas en `nexo-dev`;
+  - los códigos HTTP reales a través de la API, porque las pruebas de integración con `supabase-js` aún no se han ejecutado;
+  - las operaciones simultáneas (ver "Lo que no prueba pgTAP", más abajo).
 
 **Controles:**
 - **Única vía de escritura:** las RPC `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro` y `salir_de_organizacion` (`security definer`, `search_path = ''`, `volatile`, `execute` solo para `authenticated`).
@@ -155,10 +180,11 @@ Estado: **implementada; pruebas pgTAP aprobadas en CI; sin aplicar en `nexo-dev`
 - **Posible bloqueo mutuo (*deadlock*) al borrar la cuenta de un propietario.** Al borrar la cuenta de un propietario desde Supabase Auth, PostgreSQL borra primero su membresía y luego el trigger bloquea la organización: el orden contrario al de las RPC. Si coincide con una RPC sobre esa misma membresía, PostgreSQL cancela una de las dos operaciones, sin datos a medias.
 - **Lo que no prueba pgTAP:** usa una sola conexión, así que no puede probar operaciones simultáneas. La protección frente a ellas se apoya en el bloqueo y en el razonamiento de ADR-0004.
 - **Rendimiento:** la comprobación de ambigüedad por mayúsculas recorre `auth.users` con `lower(email)`, sin índice. Es aceptable con pocos usuarios; habrá que revisarlo si crece.
-- **Security Advisor:** se esperan cuatro avisos 0029 más, uno por RPC, intencionados como el de `crear_organizacion`. Están sin comprobar hasta aplicar la migración.
+- **Security Advisor:** tras aplicar la migración aparecieron los cuatro avisos 0029 esperados, uno por RPC, intencionados como el de `crear_organizacion` (avisos 4 a 7 de "Revisión del Security Advisor de `nexo-dev`").
 
 ## Riesgos residuales y asuntos pendientes
 - Gestión de miembros: D6 (un propietario puede quitar a otro), D7 (rechazos sin auditoría), D8 (sin límite de intentos en `agregar_miembro`) y el posible bloqueo mutuo al borrar la cuenta de un propietario (ver "Gestión de miembros").
+- Pruebas de integración de las RPC de gestión de miembros a través de la API (`supabase-js`): escritas en `pruebas/api/`, pendientes de su primera ejecución en CI.
 - Antes de un lanzamiento público: evaluar CAPTCHA, la protección contra contraseñas filtradas y los requisitos adicionales de caracteres de las contraseñas (ver "Revisión de la configuración de Auth de `nexo-dev`").
 - `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").
 - Permiso `execute` de `anon` y `authenticated` sobre `public.rls_auto_enable()`, configuración externa al repositorio: confirmar su procedencia y gestión antes de decidir si se retira.

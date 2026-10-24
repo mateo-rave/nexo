@@ -1,7 +1,8 @@
-# Ejecuta las pruebas pgTAP de supabase/tests/ contra un Supabase local y
-# desechable, creado en el servidor de GitHub a partir de las migraciones del
-# repositorio. No se conecta a nexo-dev ni a ningún proyecto remoto: no usa
-# --linked, db push ni secretos. Ver ADR-0004.
+# Ejecuta las pruebas pgTAP de supabase/tests/ y después las pruebas de
+# integración de API de pruebas/api/ (Deno + supabase-js) contra un mismo
+# Supabase local y desechable, creado en el servidor de GitHub a partir de las
+# migraciones del repositorio. No se conecta a nexo-dev ni a ningún proyecto
+# remoto: no usa --linked, db push ni secretos. Ver ADR-0004.
 name: Pruebas de base de datos
 
 on:
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   pgtap:
-    name: pgTAP en Supabase local
+    name: pgTAP y API en Supabase local
     # Los servidores Ubuntu de GitHub ya traen Docker, que necesita la CLI.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -54,3 +55,43 @@ jobs:
       # --local deja explícito que nunca se prueba contra un proyecto remoto.
       - name: Ejecutar las pruebas pgTAP
         run: npx supabase test db --local
+
+      - name: Preparar Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: 2.9.8
+
+      # Descarga supabase-js, comprueba sus hashes contra pruebas/api/deno.lock
+      # (congelado: falla si no coinciden) y comprueba los tipos.
+      - name: Comprobar las pruebas de API
+        working-directory: pruebas/api
+        env:
+          DENO_DIR: ${{ runner.temp }}/deno
+        run: deno check --frozen *.ts
+
+      # Reutiliza el Supabase local de los pasos anteriores.
+      # De "supabase status" solo se extraen la URL de la API y la clave
+      # publicable; el resto de la salida (claves secretas, contraseña de la
+      # base) ni se imprime ni llega a las pruebas. env -i arranca Deno con un
+      # entorno vacío salvo esas dos variables, y sus permisos limitan la red
+      # al puerto local de la API y el entorno a esas mismas variables.
+      - name: Ejecutar las pruebas de API
+        env:
+          DENO_DIR: ${{ runner.temp }}/deno
+        run: |
+          estado="$(npx supabase status -o env)"
+          url="$(printf '%s\n' "$estado" | sed -n -E 's/^API_URL="?([^"]*)"?$/\1/p')"
+          clave="$(printf '%s\n' "$estado" | sed -n -E 's/^PUBLISHABLE_KEY="?([^"]*)"?$/\1/p')"
+          unset estado
+          if [ -z "$url" ] || [ -z "$clave" ]; then
+            echo "No se pudieron leer API_URL y PUBLISHABLE_KEY del Supabase local." >&2
+            exit 1
+          fi
+          echo "::add-mask::$clave"
+          servidor="$(printf '%s' "$url" | sed -E 's#^https?://([^/]+).*$#\1#')"
+          cd pruebas/api
+          env -i PATH="$PATH" HOME="$HOME" DENO_DIR="$DENO_DIR" NO_COLOR=1 \
+            SUPABASE_URL="$url" SUPABASE_PUBLISHABLE_KEY="$clave" \
+            deno test --frozen \
+              --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY \
+              --allow-net="$servidor"

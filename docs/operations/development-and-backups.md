@@ -12,7 +12,7 @@ Estado: provisional. Escenario objetivo: Supabase (backend) + Vercel (frontend).
 | Node.js | Ejecutar la Supabase CLI con `npx`; herramientas del frontend de Stitch | Instalado (v24) |
 | Cuenta de Supabase | Proyectos de desarrollo y producción | Creada; proyecto `nexo-dev` creado por el propietario |
 | Cuenta de Vercel | Despliegue del frontend | No configurada |
-| GitHub | Repositorio remoto y CI | Cuenta creada (correo `noreply` configurado en el repositorio local). Falta crear el repositorio privado y configurar el remoto |
+| GitHub | Repositorio remoto y CI | Cuenta creada (correo `noreply` configurado en el repositorio local). Repositorio privado `mateo-rave/nexo` creado y configurado como remoto `origin` (rama `main`); CI en GitHub Actions |
 
 No presuponer que estas herramientas están disponibles: comprobarlas antes de cada tarea que las requiera. Las versiones se fijan al instalar, verificando compatibilidad.
 
@@ -23,7 +23,7 @@ No presuponer que estas herramientas están disponibles: comprobarlas antes de c
 **Comandos interactivos:** `npx supabase login` abre el navegador y `npx supabase link` pide la contraseña de la base de datos. Los ejecuta **el propietario en su propia terminal**, para que la contraseña no pase por ningún chat ni registro.
 
 ## Desarrollo (flujo vigente: proyecto en la nube, sin Docker)
-Decisión del 2026-10-23 (ADR-0004). La cuenta de Supabase y el proyecto `nexo-dev` ya existen; falta enlazarlo con la CLI.
+Decisión del 2026-10-23 (ADR-0004). La cuenta de Supabase y el proyecto `nexo-dev` ya existen, y el propietario lo enlazó con la CLI (`npx supabase link`, referencia `ixjupmbusvntlatgxmsi`; el vínculo local está en `supabase/.temp/`, que no se versiona).
 
 **Lo hace el propietario, manualmente (pasos 1 y 2 hechos):**
 1. Crear la cuenta de Supabase.
@@ -56,6 +56,8 @@ Con la CLI 2.120.0, `supabase test db` necesita Docker incluso con `--linked` (A
 4. `npx supabase --version` deja constancia de la versión usada.
 5. `npx supabase start` crea un Supabase local y vacío **dentro del servidor de GitHub** y le aplica `supabase/migrations/` en orden.
 6. `npx supabase test db --local` ejecuta los archivos de `supabase/tests/` con pgTAP.
+7. `denoland/setup-deno` instala Deno 2.9.8, y `deno check --frozen` descarga `supabase-js`, comprueba sus hashes contra `pruebas/api/deno.lock` y comprueba los tipos.
+8. `deno test` ejecuta las pruebas de integración de API de `pruebas/api/` contra el mismo Supabase local, con solo la URL local y la clave publicable local (ver `docs/qa/test-strategy.md`).
 
 Al terminar, GitHub destruye el servidor y la base de datos con él.
 
@@ -66,7 +68,9 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
 - Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
-**Última validación registrada:** ejecución `40129717008` del 2026-10-24 (`push`, commit `f15b3726b37c7518f62de508780055f264bf24a8`, solo documentación).
+**Última validación registrada:** ejecución `40132365624` del 2026-10-24 (`push`, commit `681d0215555298fb9e6d388d81329a1e786d21d8`, solo documentación, posterior a la aplicación en `nexo-dev`): se aplicaron las dos migraciones y los once archivos dieron `ok`, `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`. Como todas, se ejecutó contra la base desechable de CI, no contra `nexo-dev`.
+
+**Validación previa a la aplicación en `nexo-dev`:** ejecución `40129717008` del 2026-10-24 (`push`, commit `f15b3726b37c7518f62de508780055f264bf24a8`, solo documentación).
 - `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `20261024194726_gestion_miembros.sql`, y `npx supabase test db --local` ejecutó los once archivos, todos con `ok`.
 - Resumen: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
 - Avisos sin efecto en el resultado: límites de descarga (`toomanyrequests`) de `public.ecr.aws`, que la CLI resolvió descargando de `ghcr.io`.
