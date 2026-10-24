@@ -36,6 +36,12 @@ Estado: aceptado para el MVP (ver [ADR-0002](../architecture/decisions/0002-aute
 
 Regla adicional: ninguna operación puede dejar a la organización sin `propietario`.
 
+Aclaraciones (decisiones del 2026-10-24, migración 2 de la fase 1):
+- **Cambiar el rol:** un `propietario` puede cambiar también **su propio** rol, siempre que quede otro propietario. Es la vía para traspasar la propiedad.
+- **Quitar:** nadie puede quitarse a sí mismo con `quitar_miembro`; para eso existe `salir_de_organizacion`. Un `propietario` puede quitar a otro `propietario` (riesgo residual documentado en `threat-model.md`).
+- **Añadir:** solo personas con cuenta confirmada, no anónima, no eliminada, no bloqueada y no SSO. Cualquier otro caso recibe el mismo mensaje genérico.
+- **Pedir el rol que ya tiene** la persona se rechaza (`rol_sin_cambios`).
+
 ### Proyectos y tareas
 | Acción | propietario | administrador | miembro |
 |---|---|---|---|

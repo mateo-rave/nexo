@@ -1,6 +1,6 @@
 # Fase 1 — Organizaciones, membresías y seguridad base
 
-- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. V3 (registro y borrado reales con Supabase Auth) verificado en `nexo-dev` el 2026-10-24. Security Advisor de la base de datos revisado el 2026-10-24: 3 avisos `WARN`, ninguno `ERROR` (ver `docs/security/threat-model.md`). Configuración de Auth revisada desde el Dashboard el 2026-10-24: mínimo de contraseña subido de 6 a 8. Quedan para antes de un lanzamiento público CAPTCHA, la protección contra contraseñas filtradas y los requisitos de caracteres.
+- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. V3 (registro y borrado reales con Supabase Auth) verificado en `nexo-dev` el 2026-10-24. Security Advisor de la base de datos revisado el 2026-10-24: 3 avisos `WARN`, ninguno `ERROR` (ver `docs/security/threat-model.md`). Configuración de Auth revisada desde el Dashboard el 2026-10-24: mínimo de contraseña subido de 6 a 8. Quedan para antes de un lanzamiento público CAPTCHA, la protección contra contraseñas filtradas y los requisitos de caracteres. Migración 2 (gestión de miembros) implementada en el repositorio local con 98 comprobaciones pgTAP nuevas; **pendiente de revisión, de ejecutar sus pruebas y de aplicarla** en `nexo-dev`.
 - Fecha: 2026-10-23
 - Referencias: [ADR-0002](../architecture/decisions/0002-autenticacion-y-autorizacion-multiempresa.md), [ADR-0004](../architecture/decisions/0004-entornos-migraciones-y-pruebas.md), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md).
 
@@ -179,7 +179,7 @@ Todo con correos `@example.com`.
 | `organizaciones.test.sql` | Los miembros de A ven A; `propietario_a` y `administrador_a` la renombran. | `propietario_b` ve, edita o borra A; `miembro_a` la renombra; insertar directamente sin la función. |
 | `membresias.test.sql` | Los miembros de A ven los miembros de A. | `propietario_b` ve los miembros de A; cualquiera inserta, edita o borra directamente. |
 | `crear_organizacion.test.sql` | Se crea la organización con su propietario y queda en auditoría. | Sin sesión; nombre vacío o demasiado largo. |
-| `gestion_miembros.test.sql` | `propietario_a` añade un administrador; `administrador_a` añade y quita un miembro; `propietario_a` cambia roles; `miembro_a` sale; el correo funciona con mayúsculas o espacios. | `administrador_a` nombra administrador u propietario; `miembro_a` añade miembros; `propietario_b` gestiona miembros de A; el último propietario sale o se degrada; añadir a alguien que ya es miembro; correo no registrado y correo sin confirmar devuelven el mismo mensaje; sin permisos, el error aparece antes de buscar el correo. |
+| `agregar_miembro.test.sql`, `cambiar_rol_miembro.test.sql`, `quitar_miembro.test.sql`, `salir_de_organizacion.test.sql` y `aislamiento_rpc.test.sql` (sustituyen al `gestion_miembros.test.sql` previsto) | `propietario_a` añade un administrador; `administrador_a` añade y quita un miembro; `propietario_a` cambia roles; `miembro_a` sale; el correo funciona con mayúsculas o espacios. | `administrador_a` nombra administrador u propietario; `miembro_a` añade miembros; `propietario_b` gestiona miembros de A; el último propietario sale o se degrada; añadir a alguien que ya es miembro; correo no registrado y correo sin confirmar devuelven el mismo mensaje; sin permisos, el error aparece antes de buscar el correo. |
 | `auditoria.test.sql` | `propietario_a` y `administrador_a` leen la auditoría de A. | `miembro_a` la lee; `propietario_b` lee la de A; cualquiera edita o borra un registro. |
 
 Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **sigue intacta**.
@@ -196,11 +196,20 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
    - triggers: perfil al registrarse, `actualizado_en`, siempre un propietario, `organizacion_id` inmutable, auditoría inmutable y auditoría del cambio de nombre;
    - RPC `crear_organizacion`.
 3. **Migración 2 — gestión de miembros:** `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `salir_de_organizacion`, con su auditoría.
+   - **Implementada en el repositorio local** (`20261024194726_gestion_miembros.sql`). **No aplicada en `nexo-dev`**, pendiente de revisión.
+   - Aplica las decisiones D1 a D9 del 2026-10-24: aclaraciones en `docs/security/permissions.md`; riesgos residuales en `docs/security/threat-model.md`.
+   - Exige `read committed`; sigue el orden de comprobación y bloqueo de ADR-0004.
+   - Busca cuentas con `privado.buscar_usuario_confirmado` (comparación exacta del correo normalizado, más `is_sso_user = false`).
 4. *(Unido a los pasos 2 y 3.)*
-5. **Pruebas:** los archivos pgTAP de la tabla anterior. Para la migración 1 están escritos `rls_activado`, `perfiles`, `organizaciones`, `membresias`, `crear_organizacion` y `auditoria`. `gestion_miembros` se escribirá con la migración 2.
+5. **Pruebas:** los archivos pgTAP de la tabla anterior. Para la migración 1 están escritos `rls_activado`, `perfiles`, `organizaciones`, `membresias`, `crear_organizacion` y `auditoria`. Los de la migración 2 se describen más abajo.
    - **Ejecutadas el 2026-10-24** con `npx supabase test db --local` en GitHub Actions, contra un Supabase local y desechable creado desde las migraciones (no contra `nexo-dev`). Ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`: los seis archivos `ok`, `All tests successful.`, `Files=6, Tests=101`, `Result: PASS`.
    - La ejecución `40115395090` no tiene registros accesibles y no cuenta como evidencia.
-   - Validan solo las operaciones que cubren; no cubren aún la gestión de miembros (migración 2).
+   - Validan solo las operaciones que cubren; no cubren la gestión de miembros (migración 2).
+   - **Para la migración 2** hay cinco archivos nuevos, con 98 comprobaciones: `agregar_miembro` (30), `cambiar_rol_miembro` (21), `quitar_miembro` (20), `salir_de_organizacion` (15) y `aislamiento_rpc` (12, que comprueba el rechazo de `repeatable read`).
+     - Sustituyen al `gestion_miembros.test.sql` previsto (un archivo por función).
+     - Cubren los casos permitidos, los rechazos de permisos, las cuentas no elegibles con el mismo mensaje, la auditoría, el último propietario y que los rechazos no cambian membresías ni crean auditoría.
+     - **Todavía no se han ejecutado.**
+     - No cubren operaciones simultáneas, que pgTAP no puede probar con una sola conexión.
 6. **Aplicar y verificar en `nexo-dev`:**
    - `db push --dry-run` y luego `db push`: **hecho** el 2026-10-24.
    - Ejecutar las pruebas: hecho en CI (paso 5), porque `test db --linked` necesita Docker.

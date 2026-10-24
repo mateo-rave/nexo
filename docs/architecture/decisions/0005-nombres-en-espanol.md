@@ -129,6 +129,17 @@ Si se necesita un nombre nuevo, se añade aquí antes de usarlo.
 | Códigos de error propios (campo `details` de la respuesta) | `sesion_requerida`, `nombre_invalido`, `perfil_inexistente`, `ultimo_propietario`, `auditoria_inmutable`, `organizacion_inmutable` |
 | Workflow de GitHub Actions para pgTAP | `.github/workflows/pruebas-base-datos.yml` (nombre visible "Pruebas de base de datos", job `pgtap`) |
 
+### Añadidos con la migración de gestión de miembros (migración 2 de la fase 1, 2026-10-24)
+Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `salir_de_organizacion`) y sus acciones de auditoría ya figuraban en el glosario.
+
+| Elemento | Nombre oficial |
+|---|---|
+| Función: buscar la única cuenta elegible para un correo | `privado.buscar_usuario_confirmado(correo)` |
+| Función: rechazar niveles de aislamiento distintos de `read committed` | `privado.exigir_read_committed()` |
+| Claves de `detalles` en `miembro.rol_cambiado` | `rol_anterior`, `rol_nuevo` |
+| Códigos de error nuevos (campo `details` de la respuesta) | `permiso_denegado`, `rol_no_permitido`, `rol_invalido`, `correo_invalido`, `usuario_no_disponible`, `ya_es_miembro`, `miembro_no_encontrado`, `rol_sin_cambios`, `accion_no_permitida`, `aislamiento_no_soportado` |
+| Archivos de prueba | `agregar_miembro.test.sql`, `cambiar_rol_miembro.test.sql`, `quitar_miembro.test.sql`, `salir_de_organizacion.test.sql`, `aislamiento_rpc.test.sql` |
+
 **Convenciones de código SQL:**
 - Parámetros de función con prefijo `p_` (`p_nombre`) y variables con `v_` (`v_usuario_id`), para no confundirlos con columnas del mismo nombre.
 - Triggers: `<tabla>_<que_hace>` (`membresias_exigir_propietario`).

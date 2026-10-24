@@ -126,7 +126,37 @@ El propietario revisó las opciones de autenticación en el Dashboard de Supabas
   - la protección contra contraseñas filtradas;
   - los requisitos adicionales de caracteres de las contraseñas, que no pudieron verificarse.
 
+## Gestión de miembros (migración 2 de la fase 1)
+Estado: **implementada en el repositorio local, sin aplicar en `nexo-dev` y sin pruebas ejecutadas**. Migración `20261024194726_gestion_miembros.sql`.
+
+**Controles:**
+- **Única vía de escritura:** las RPC `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro` y `salir_de_organizacion` (`security definer`, `search_path = ''`, `volatile`, `execute` solo para `authenticated`).
+- **Orden fijo en todas:**
+  1. rechazar cualquier aislamiento distinto de `read committed`;
+  2. comprobar la sesión;
+  3. comprobación preliminar de permiso, sin bloquear;
+  4. bloquear la organización con `for no key update`;
+  5. volver a comprobar el rol actual con `for share`, en otra instrucción;
+  6. validar los datos;
+  7. escribir el cambio y la auditoría en la misma transacción.
+- **Correos de otras personas:**
+  - El permiso, incluido el rol pedido, se comprueba **antes** de buscar el correo del destinatario.
+  - Quien no tiene permiso recibe el mismo error exista o no la organización.
+  - `privado.buscar_usuario_confirmado` usa la comparación exacta sobre el correo normalizado, más `is_sso_user = false`, apoyada en el índice único verificado en `nexo-dev`.
+  - Devuelve el mismo resultado genérico (`usuario_no_disponible`) para cuentas inexistentes, sin confirmar, anónimas, eliminadas, bloqueadas, SSO o ambiguas por mayúsculas.
+- **Último propietario:** lo comprueban las funciones y, como respaldo, el trigger `exigir_propietario` de la migración 1.
+
+**Riesgos residuales aceptados:**
+- **Un propietario puede quitar a otro propietario (D6).** Queda auditado (`miembro.quitado`), pero no hay aprobación previa: un propietario hostil puede expulsar a los demás.
+- **Los intentos rechazados no quedan en la auditoría (D7).** Al lanzar el error, PostgreSQL deshace toda la transacción, incluida cualquier fila de auditoría. Guardarlos exigiría otro diseño (respuestas sin excepción o una transacción independiente).
+- **No hay límite de intentos en `agregar_miembro` (D8).** Un `propietario` o `administrador` puede probar correos para saber si tienen cuenta elegible. Lo limita que solo ellos pueden llamarla y que cada alta queda auditada.
+- **Posible bloqueo mutuo (*deadlock*) al borrar la cuenta de un propietario.** Al borrar la cuenta de un propietario desde Supabase Auth, PostgreSQL borra primero su membresía y luego el trigger bloquea la organización: el orden contrario al de las RPC. Si coincide con una RPC sobre esa misma membresía, PostgreSQL cancela una de las dos operaciones, sin datos a medias.
+- **Lo que no prueba pgTAP:** usa una sola conexión, así que no puede probar operaciones simultáneas. La protección frente a ellas se apoya en el bloqueo y en el razonamiento de ADR-0004.
+- **Rendimiento:** la comprobación de ambigüedad por mayúsculas recorre `auth.users` con `lower(email)`, sin índice. Es aceptable con pocos usuarios; habrá que revisarlo si crece.
+- **Security Advisor:** se esperan cuatro avisos 0029 más, uno por RPC, intencionados como el de `crear_organizacion`. Están sin comprobar hasta aplicar la migración.
+
 ## Riesgos residuales y asuntos pendientes
+- Gestión de miembros: D6 (un propietario puede quitar a otro), D7 (rechazos sin auditoría), D8 (sin límite de intentos en `agregar_miembro`) y el posible bloqueo mutuo al borrar la cuenta de un propietario (ver "Gestión de miembros").
 - Antes de un lanzamiento público: evaluar CAPTCHA, la protección contra contraseñas filtradas y los requisitos adicionales de caracteres de las contraseñas (ver "Revisión de la configuración de Auth de `nexo-dev`").
 - `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").
 - Permiso `execute` de `anon` y `authenticated` sobre `public.rls_auto_enable()`, configuración externa al repositorio: confirmar su procedencia y gestión antes de decidir si se retira.

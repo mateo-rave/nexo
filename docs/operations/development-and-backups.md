@@ -62,7 +62,7 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 **Lo que no hace:** no usa `--linked`, `db push`, `db reset` contra un proyecto remoto, `SUPABASE_ACCESS_TOKEN`, la contraseña de `nexo-dev` ni ningún otro secreto. Sus permisos son solo de lectura del repositorio (`contents: read`).
 
 **Cómo leer el resultado:** en el registro del paso "Ejecutar las pruebas pgTAP":
-- **Éxito:** cada archivo termina en `.. ok` y al final aparecen `All tests successful.`, `Files=6, Tests=101` y `Result: PASS`. El job se marca en verde.
+- **Éxito:** cada archivo termina en `.. ok` y al final aparecen `All tests successful.`, `Files=11, Tests=199` y `Result: PASS`. El job se marca en verde.
 - **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
 - Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
