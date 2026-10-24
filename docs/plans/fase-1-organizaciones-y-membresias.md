@@ -1,6 +1,6 @@
 # Fase 1 — Organizaciones, membresías y seguridad base
 
-- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. V3 (registro y borrado reales con Supabase Auth) verificado en `nexo-dev` el 2026-10-24. Security Advisor de la base de datos revisado el 2026-10-24: 3 avisos `WARN`, ninguno `ERROR` (ver `docs/security/threat-model.md`). Configuración de Auth revisada desde el Dashboard el 2026-10-24: mínimo de contraseña subido de 6 a 8. Quedan para antes de un lanzamiento público CAPTCHA, la protección contra contraseñas filtradas y los requisitos de caracteres. Migración 2 (gestión de miembros) implementada en el repositorio local con 98 comprobaciones pgTAP nuevas; **pendiente de revisión, de ejecutar sus pruebas y de aplicarla** en `nexo-dev`.
+- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. V3 (registro y borrado reales con Supabase Auth) verificado en `nexo-dev` el 2026-10-24. Security Advisor de la base de datos revisado el 2026-10-24: 3 avisos `WARN`, ninguno `ERROR` (ver `docs/security/threat-model.md`). Configuración de Auth revisada desde el Dashboard el 2026-10-24: mínimo de contraseña subido de 6 a 8. Quedan para antes de un lanzamiento público CAPTCHA, la protección contra contraseñas filtradas y los requisitos de caracteres. Migración 2 (gestión de miembros) implementada, con 98 comprobaciones pgTAP nuevas. Pasó en GitHub Actions contra un Supabase local y desechable: ejecución `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`, `Files=11, Tests=199`, `Result: PASS`. **Pendiente de aplicarla** en `nexo-dev`.
 - Fecha: 2026-10-23
 - Referencias: [ADR-0002](../architecture/decisions/0002-autenticacion-y-autorizacion-multiempresa.md), [ADR-0004](../architecture/decisions/0004-entornos-migraciones-y-pruebas.md), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md).
 
@@ -196,7 +196,7 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
    - triggers: perfil al registrarse, `actualizado_en`, siempre un propietario, `organizacion_id` inmutable, auditoría inmutable y auditoría del cambio de nombre;
    - RPC `crear_organizacion`.
 3. **Migración 2 — gestión de miembros:** `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `salir_de_organizacion`, con su auditoría.
-   - **Implementada en el repositorio local** (`20261024194726_gestion_miembros.sql`). **No aplicada en `nexo-dev`**, pendiente de revisión.
+   - **Implementada y publicada en `main`** (`20261024194726_gestion_miembros.sql`). Sus pruebas pasaron en CI (paso 5). **No aplicada en `nexo-dev`.**
    - Aplica las decisiones D1 a D9 del 2026-10-24: aclaraciones en `docs/security/permissions.md`; riesgos residuales en `docs/security/threat-model.md`.
    - Exige `read committed`; sigue el orden de comprobación y bloqueo de ADR-0004.
    - Busca cuentas con `privado.buscar_usuario_confirmado` (comparación exacta del correo normalizado, más `is_sso_user = false`).
@@ -208,7 +208,8 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
    - **Para la migración 2** hay cinco archivos nuevos, con 98 comprobaciones: `agregar_miembro` (30), `cambiar_rol_miembro` (21), `quitar_miembro` (20), `salir_de_organizacion` (15) y `aislamiento_rpc` (12, que comprueba el rechazo de `repeatable read`).
      - Sustituyen al `gestion_miembros.test.sql` previsto (un archivo por función).
      - Cubren los casos permitidos, los rechazos de permisos, las cuentas no elegibles con el mismo mensaje, la auditoría, el último propietario y que los rechazos no cambian membresías ni crean auditoría.
-     - **Todavía no se han ejecutado.**
+     - **Primera ejecución, fallida:** ejecución `40128592605`, commit `9447e8fcac2c5d22b2714bcfb7f264375a160d29`. Las dos migraciones se aplicaron, pero la 2.ª comprobación de `agregar_miembro` falló por una comparación de textos con distinta intercalación (*collation*). Eso detuvo el archivo: `Files=11, Tests=170`, `Result: FAIL`. Se corrigió solo la prueba, con `collate "default"`.
+     - **Ejecutadas y aprobadas el 2026-10-24** con `npx supabase test db --local` en GitHub Actions, contra un Supabase local y desechable (no contra `nexo-dev`). Ejecución `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`: se aplicaron `20261024161000_esquema_base_organizaciones.sql` y `20261024194726_gestion_miembros.sql`, los once archivos `ok`, `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
      - No cubren operaciones simultáneas, que pgTAP no puede probar con una sola conexión.
 6. **Aplicar y verificar en `nexo-dev`:**
    - `db push --dry-run` y luego `db push`: **hecho** el 2026-10-24.

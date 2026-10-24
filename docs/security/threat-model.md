@@ -127,7 +127,9 @@ El propietario revisó las opciones de autenticación en el Dashboard de Supabas
   - los requisitos adicionales de caracteres de las contraseñas, que no pudieron verificarse.
 
 ## Gestión de miembros (migración 2 de la fase 1)
-Estado: **implementada en el repositorio local, sin aplicar en `nexo-dev` y sin pruebas ejecutadas**. Migración `20261024194726_gestion_miembros.sql`.
+Estado: **implementada; pruebas pgTAP aprobadas en CI; sin aplicar en `nexo-dev`**. Migración `20261024194726_gestion_miembros.sql`.
+- **Evidencia:** ejecución de GitHub Actions `40128981309`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`. Se aplicaron las migraciones 1 y 2 en un Supabase **local y desechable** de CI y el resultado fue `Files=11, Tests=199`, `Result: PASS`.
+- **Lo que no valida:** el comportamiento en `nexo-dev`, los códigos HTTP reales a través de la API ni las operaciones simultáneas (ver "Lo que no prueba pgTAP", más abajo).
 
 **Controles:**
 - **Única vía de escritura:** las RPC `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro` y `salir_de_organizacion` (`security definer`, `search_path = ''`, `volatile`, `execute` solo para `authenticated`).

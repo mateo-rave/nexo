@@ -66,7 +66,13 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
 - Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
-**Última validación registrada:** ejecución `40117625548` del 2026-10-24 (`workflow_dispatch`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`).
+**Última validación registrada:** ejecución `40128981309` del 2026-10-24 (`push`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`).
+- `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `20261024194726_gestion_miembros.sql`, y `npx supabase test db --local` ejecutó los once archivos, todos con `ok`.
+- Resumen: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
+- La ejecución anterior con la migración 2, `40128592605` (commit `9447e8f`), **falló**: un error de intercalación (*collation*) en una comprobación de `agregar_miembro.test.sql` detuvo ese archivo (`Files=11, Tests=170`, `Result: FAIL`). Se corrigió la prueba, no la migración.
+- Se ejecutaron contra la base local y desechable de CI, no contra `nexo-dev`, donde la migración 2 todavía no está aplicada.
+
+**Validación de la migración 1:** ejecución `40117625548` del 2026-10-24 (`workflow_dispatch`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`).
 - `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `npx supabase test db --local` ejecutó los seis archivos, todos con `ok`.
 - Resumen: `All tests successful.`, `Files=6, Tests=101`, `Result: PASS`.
 - Avisos sin efecto en el resultado:
