@@ -1,6 +1,6 @@
 # Fase 1 — Organizaciones, membresías y seguridad base
 
-- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus pruebas pgTAP están preparadas para GitHub Actions, pero todavía no se han ejecutado.
+- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. Pendiente en `nexo-dev`: registro real con Supabase Auth y revisión del Security Advisor.
 - Fecha: 2026-10-23
 - Referencias: [ADR-0002](../architecture/decisions/0002-autenticacion-y-autorizacion-multiempresa.md), [ADR-0004](../architecture/decisions/0004-entornos-migraciones-y-pruebas.md), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md).
 
@@ -197,11 +197,15 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
    - RPC `crear_organizacion`.
 3. **Migración 2 — gestión de miembros:** `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `salir_de_organizacion`, con su auditoría.
 4. *(Unido a los pasos 2 y 3.)*
-5. **Pruebas:** los archivos pgTAP de la tabla anterior. Preparados para la migración 1: `rls_activado`, `perfiles`, `organizaciones`, `membresias`, `crear_organizacion` y `auditoria`. `gestion_miembros` se escribirá con la migración 2.
+5. **Pruebas:** los archivos pgTAP de la tabla anterior. Para la migración 1 están escritos `rls_activado`, `perfiles`, `organizaciones`, `membresias`, `crear_organizacion` y `auditoria`. `gestion_miembros` se escribirá con la migración 2.
+   - **Ejecutadas el 2026-10-24** con `npx supabase test db --local` en GitHub Actions, contra un Supabase local y desechable creado desde las migraciones (no contra `nexo-dev`). Ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`: los seis archivos `ok`, `All tests successful.`, `Files=6, Tests=101`, `Result: PASS`.
+   - La ejecución `40115395090` no tiene registros accesibles y no cuenta como evidencia.
+   - Validan solo las operaciones que cubren; no cubren aún la gestión de miembros (migración 2).
 6. **Aplicar y verificar en `nexo-dev`:**
-   - `db push --dry-run` y luego `db push`;
-   - ejecutar las pruebas;
-   - revisar el Security Advisor.
+   - `db push --dry-run` y luego `db push`: **hecho** el 2026-10-24.
+   - Ejecutar las pruebas: hecho en CI (paso 5), porque `test db --linked` necesita Docker.
+   - **Pendiente:** comprobar con un registro real de Supabase Auth en `nexo-dev` que se crea el perfil.
+   - **Pendiente:** revisar el Security Advisor.
 7. **Commit en Git** con las migraciones y las pruebas.
 
 Cada paso se revisa antes de pasar al siguiente.

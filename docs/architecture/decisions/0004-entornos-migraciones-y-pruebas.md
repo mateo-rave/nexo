@@ -16,7 +16,7 @@ La máquina de desarrollo actual (Windows) no tiene Docker, Supabase CLI, Deno n
 
 ## Decisión
 - **Vigente:** opción 2. Proyecto Supabase en la nube **exclusivo para desarrollo**, sin Docker local (decisión del propietario, 2026-10-23).
-- **CI:** el workflow de GitHub Actions (`.github/workflows/pruebas-base-datos.yml`) está preparado, pero todavía no se ha publicado ni ejecutado: falta crear el repositorio privado y configurar el remoto. Sus runners Linux sí incluyen Docker.
+- **CI:** el workflow de GitHub Actions (`.github/workflows/pruebas-base-datos.yml`) está publicado en el repositorio privado `mateo-rave/nexo`. Sus runners Linux sí incluyen Docker. Primera validación con registro completo: ejecución `40117625548` (2026-10-24), ver "Cómo se ejecutarán las pruebas pgTAP sin Docker".
 - **Futuro:** la opción 1 (Docker local) queda como mejora para cuando el ciclo de pruebas contra la nube resulte lento.
 - **Branching:** la opción 3 se reevaluará al elegir plan.
 - Ninguna prueba se declarará aprobada si no se ejecutó en alguno de estos entornos.
@@ -40,7 +40,10 @@ Cada archivo de prueba:
 - crea la extensión pgTAP dentro de la propia prueba, para que la migración de producción no la incluya.
 
 1. ~~Comprobar si `supabase test db --linked` funciona sin Docker.~~ Comprobado el 2026-10-24: **no funciona** (ver tabla anterior).
-2. **Vía elegida: GitHub Actions** (propuesta del 2026-10-24, pendiente de la primera ejecución). El workflow `.github/workflows/pruebas-base-datos.yml` levanta en el servidor de GitHub un Supabase **local y desechable**, le aplica `supabase/migrations/` y ejecuta `supabase test db --local`. No toca `nexo-dev` ni usa credenciales. Detalle en `docs/operations/development-and-backups.md`.
+2. **Vía elegida: GitHub Actions.** El workflow `.github/workflows/pruebas-base-datos.yml` levanta en el servidor de GitHub un Supabase **local y desechable**, le aplica `supabase/migrations/` y ejecuta `npx supabase test db --local`. No toca `nexo-dev` ni usa credenciales. Detalle en `docs/operations/development-and-backups.md`.
+   - **Validado el 2026-10-24** en la ejecución `40117625548` (`workflow_dispatch`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`). El registro muestra los seis archivos de `supabase/tests/` con `ok`, `All tests successful.`, `Files=6, Tests=101` y `Result: PASS`.
+   - La ejecución anterior `40115395090` (`push`, mismo commit) figura como `success`, pero GitHub no conserva sus registros ni sus pasos. **No cuenta como evidencia.**
+   - Estas pruebas validan solo lo que cubren: aislamiento entre organizaciones, permisos, triggers y `crear_organizacion` de la migración 1, contra una base local. No sustituyen las comprobaciones pendientes en `nexo-dev`: registro real con Supabase Auth y revisión del Security Advisor.
 3. Se descartó por ahora el SQL Editor: solo muestra el resultado de la última instrucción (`rollback`), así que habría que adaptar los archivos de prueba para ver los resultados de pgTAP.
 
 ### Reglas para el proyecto remoto de desarrollo
@@ -93,7 +96,7 @@ Producción nunca se usa para pruebas ni para ejecutar `db reset`.
 Las versiones exactas de Supabase CLI, Deno y librerías se fijarán al instalarlas, verificando su compatibilidad. La de Supabase CLI queda en `package.json`.
 
 ## Consecuencias
-- Sin Docker local, las pruebas de base de datos se ejecutan en CI: el workflow de GitHub Actions está preparado, pero todavía no se ha ejecutado (falta publicar el repositorio).
+- Sin Docker local, las pruebas de base de datos se ejecutan en CI (GitHub Actions). La primera validación con registro completo fue la ejecución `40117625548`: `Files=6, Tests=101`, `Result: PASS`.
 - El ciclo de prueba es más lento que en local: cada cambio se sube por red.
 - El proyecto remoto es compartido. Si dos personas trabajan a la vez, sus datos de prueba pueden mezclarse. Por eso las pruebas crean sus propios datos y los deshacen con `rollback`.
 - **Instalación de la Supabase CLI (decidido el 2026-10-23):** como dependencia de desarrollo del proyecto con npm (`npm install supabase --save-dev`) y uso mediante `npx supabase ...`. Requiere Node.js 20 o superior; la máquina tiene Node.js 24.

@@ -66,6 +66,15 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
 - Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
+**Última validación registrada:** ejecución `40117625548` del 2026-10-24 (`workflow_dispatch`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`).
+- `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `npx supabase test db --local` ejecutó los seis archivos, todos con `ok`.
+- Resumen: `All tests successful.`, `Files=6, Tests=101`, `Result: PASS`.
+- Avisos sin efecto en el resultado:
+  - `no files matched pattern: supabase/seed.sql`;
+  - límites de descarga (`toomanyrequests`) de `public.ecr.aws`, que la CLI resolvió descargando de `ghcr.io`.
+- La ejecución por *push* `40115395090` (mismo commit) figura como `success`, pero sin registros ni pasos accesibles. **No se usa como evidencia.**
+- Estas pruebas se ejecutan contra la base local y desechable, no contra `nexo-dev`. Siguen pendientes, en `nexo-dev`, el registro real con Supabase Auth y la revisión del Security Advisor.
+
 ## Entornos
 - **Local:** Supabase CLI, datos sintéticos, claves locales generadas por la CLI.
 - **Desarrollo remoto:** proyecto Supabase separado, datos sintéticos, reiniciable.
