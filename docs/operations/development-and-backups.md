@@ -66,11 +66,14 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - **Fallo:** el archivo afectado muestra `not ok N - <descripción de la comprobación>`, junto con lo esperado y lo obtenido. Al final aparece `Result: FAIL`. El job se marca en rojo.
 - Si un archivo ejecuta menos comprobaciones de las que declara su `plan()`, pg_prove también lo marca como fallo.
 
-**Última validación registrada:** ejecución `40128981309` del 2026-10-24 (`push`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`).
+**Última validación registrada:** ejecución `40129717008` del 2026-10-24 (`push`, commit `f15b3726b37c7518f62de508780055f264bf24a8`, solo documentación).
 - `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `20261024194726_gestion_miembros.sql`, y `npx supabase test db --local` ejecutó los once archivos, todos con `ok`.
 - Resumen: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
+- Avisos sin efecto en el resultado: límites de descarga (`toomanyrequests`) de `public.ecr.aws`, que la CLI resolvió descargando de `ghcr.io`.
+- Se ejecutaron contra la base local y desechable de CI, no contra `nexo-dev`, donde la migración 2 todavía no está aplicada (pendiente según `migration list --linked` y `db push --dry-run --linked` del 2026-10-24).
+
+**Validación anterior de la migración 2:** ejecución `40128981309` del 2026-10-24 (`push`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`), con el mismo resultado: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
 - La ejecución anterior con la migración 2, `40128592605` (commit `9447e8f`), **falló**: un error de intercalación (*collation*) en una comprobación de `agregar_miembro.test.sql` detuvo ese archivo (`Files=11, Tests=170`, `Result: FAIL`). Se corrigió la prueba, no la migración.
-- Se ejecutaron contra la base local y desechable de CI, no contra `nexo-dev`, donde la migración 2 todavía no está aplicada.
 
 **Validación de la migración 1:** ejecución `40117625548` del 2026-10-24 (`workflow_dispatch`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`).
 - `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `npx supabase test db --local` ejecutó los seis archivos, todos con `ok`.
@@ -124,6 +127,55 @@ El prefijo de las variables públicas del frontend (`VITE_`, `NEXT_PUBLIC_`, etc
 - No editar migraciones aplicadas en entornos compartidos.
 - No hacer cambios manuales en producción desde el dashboard.
 - Orden de despliegue: CI verde → respaldo verificado → migración en producción con autorización explícita → verificación posterior.
+
+### Reversión manual de la migración 2 (`20261024194726_gestion_miembros.sql`)
+Preparada el 2026-10-24 para aplicar la migración 2 en `nexo-dev` sin respaldo. **No existe ningún respaldo verificado de `nexo-dev`**: no consta qué ofrece su plan y nunca se ha hecho un `pg_dump` propio. Se acepta porque es un proyecto de desarrollo, con datos sintéticos, y la migración solo añade funciones. **No se ha ejecutado nunca.** Ejecutarla requiere autorización explícita.
+
+**Qué crea la migración** (según sus `create function`):
+- `privado.exigir_read_committed()`
+- `privado.buscar_usuario_confirmado(text)`
+- `public.agregar_miembro(uuid, text, public.rol_membresia)`
+- `public.cambiar_rol_miembro(uuid, uuid, public.rol_membresia)`
+- `public.quitar_miembro(uuid, uuid)`
+- `public.salir_de_organizacion(uuid)`
+
+Además, ajusta sus permisos con `revoke` y `grant`. No crea tablas, tipos, políticas, triggers ni esquemas, y no modifica datos al aplicarse.
+
+**Orden:** primero las cuatro RPC públicas y después las dos funciones auxiliares, porque las RPC llaman a esas funciones:
+- las cuatro llaman a `privado.exigir_read_committed()`;
+- `agregar_miembro` llama también a `privado.buscar_usuario_confirmado(text)`.
+
+PostgreSQL no registra las llamadas dentro de un cuerpo PL/pgSQL como dependencias, así que no impondría este orden por sí mismo. Se sigue igualmente para que nunca exista una RPC que llame a una función ya borrada. Todo va en una sola transacción: o se borra todo o nada.
+
+```sql
+begin;
+drop function public.agregar_miembro(uuid, text, public.rol_membresia);
+drop function public.cambiar_rol_miembro(uuid, uuid, public.rol_membresia);
+drop function public.quitar_miembro(uuid, uuid);
+drop function public.salir_de_organizacion(uuid);
+drop function privado.buscar_usuario_confirmado(text);
+drop function privado.exigir_read_committed();
+commit;
+```
+
+Sin `if exists` ni `cascade`, a propósito:
+- si una función falta o tiene otra firma, el script falla y no borra nada;
+- si algún objeto posterior depende de estas funciones, PostgreSQL se niega a borrarlas en vez de arrastrarlo.
+
+Al borrar cada función desaparecen también sus permisos `execute`.
+
+**Qué queda intacto:** todo lo que creó la migración 1, que la migración 2 no modifica:
+- el esquema `privado` y el tipo `public.rol_membresia`;
+- las tablas `perfiles`, `organizaciones`, `membresias` y `auditoria`, con sus índices, políticas RLS y triggers;
+- las funciones `privado.es_miembro`, `privado.tiene_rol`, `privado.tiene_organizacion_en_comun`, las funciones de los triggers y `public.crear_organizacion`.
+
+**Lo que no deshace:**
+- **Datos:** las membresías que se hayan añadido, cambiado o quitado con estas RPC, y sus filas de `auditoria`, permanecen. La auditoría es inmutable por diseño (trigger `auditoria_impedir_cambios`).
+- **Historial de migraciones:** borrar las funciones a mano no actualiza `supabase_migrations.schema_migrations`. La versión `20261024194726` seguiría figurando como aplicada en `migration list --linked`, y `db push` no volvería a aplicarla. Tras una reversión, el historial debe tratarse explícitamente, con su propia autorización, por ejemplo con `npx supabase migration repair 20261024194726 --status reverted --linked`, que escribe en esa tabla remota. También hay que decidir qué hacer con el archivo local de la migración.
+
+**Comprobación tras una reversión (solo lectura):**
+- las seis funciones ya no existen en `pg_proc`;
+- las tablas, políticas y funciones de la migración 1 siguen presentes.
 
 ## Respaldos
 - La disponibilidad, frecuencia y retención de los backups administrados de Supabase, y de PITR, dependen del plan. Verificarlo al contratar; no asumirlo.
