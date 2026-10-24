@@ -80,7 +80,7 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - Una consulta de solo lectura (`npx supabase db query --linked`) confirmó su perfil, con `nombre_visible = 'Usuario'` y 0 membresías.
 - Tras borrarlo desde el Dashboard, otra consulta de solo lectura confirmó 0 cuentas, 0 perfiles y 0 membresías residuales.
 - **Límites:** no cubre el envío de `nombre_visible` desde el frontend y no valida la aplicación completa.
-- **Sigue pendiente** la revisión del Security Advisor de `nexo-dev`.
+- El Security Advisor de la base de datos ya se revisó (2026-10-24, ver `docs/security/threat-model.md`). **Sigue pendiente** la revisión complementaria de la configuración de Auth desde el Dashboard.
 
 ## Entornos
 - **Local:** Supabase CLI, datos sintéticos, claves locales generadas por la CLI.
@@ -104,6 +104,13 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 | Orígenes permitidos para CORS de Edge Functions | Secrets de Edge Functions | Sí |
 
 El prefijo de las variables públicas del frontend (`VITE_`, `NEXT_PUBLIC_`, etc.) depende del framework que genere Stitch; no se fija hasta inspeccionarlo. Las Edge Functions reciben automáticamente algunas variables de Supabase; verificar cuáles en la documentación vigente al implementarlas.
+
+> **Precaución con `npx supabase projects api-keys`:** el 2026-10-24, con la CLI 2.120.0 y **sin `--reveal`**, la salida de este comando incluyó la clave heredada `service_role` completa. Apareció en una salida local, no se mostró ni se guardó y no se publicó intencionalmente en GitHub. No hay indicios de que esté comprometida.
+> - No volver a ejecutar ese comando con la salida completa visible en pantalla ni guardada en registros.
+> - Para consultar claves, preferir el Dashboard, o una consulta que filtre explícitamente los valores secretos antes de mostrar nada.
+> - No copiar claves secretas (`sb_secret_...`, `service_role`) a archivos versionados, prompts, registros compartidos ni capturas de pantalla.
+> - `service_role` tiene privilegios elevados y **elude RLS**: quien la tenga puede leer y modificar los datos de todas las organizaciones.
+> - Cualquier rotación o desactivación de esta clave debe planificarse después de comprobar qué depende de ella.
 
 ## Migraciones
 - Ubicación: `supabase/migrations/`.

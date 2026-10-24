@@ -1,6 +1,6 @@
 # Fase 1 — Organizaciones, membresías y seguridad base
 
-- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. V3 (registro y borrado reales con Supabase Auth) verificado en `nexo-dev` el 2026-10-24. Pendiente en `nexo-dev`: revisión del Security Advisor.
+- Estado: en curso. Requisitos previos 1, 2, 4 y 5 hechos. Paso 1 de implementación hecho (`supabase init`). Migración 1 escrita y aplicada en `nexo-dev` (2026-10-24). Sus seis archivos de pruebas pgTAP (101 comprobaciones) pasaron en GitHub Actions contra una base local y desechable: ejecución `40117625548`, commit `e16163f2632c295c495ebd287e3eca0a582759dd`. V3 (registro y borrado reales con Supabase Auth) verificado en `nexo-dev` el 2026-10-24. Security Advisor de la base de datos revisado el 2026-10-24: 3 avisos `WARN`, ninguno `ERROR` (ver `docs/security/threat-model.md`). Pendiente: revisión complementaria de la configuración de Auth desde el Dashboard.
 - Fecha: 2026-10-23
 - Referencias: [ADR-0002](../architecture/decisions/0002-autenticacion-y-autorizacion-multiempresa.md), [ADR-0004](../architecture/decisions/0004-entornos-migraciones-y-pruebas.md), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md).
 
@@ -209,7 +209,8 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
      - Supabase Auth creó su perfil automáticamente mediante el trigger `crear_perfil_al_registrarse`, con `nombre_visible = 'Usuario'` y 0 membresías.
      - Después se borró desde el Dashboard. Una consulta de solo lectura confirmó 0 cuentas, 0 perfiles y 0 membresías residuales. No quedan datos de prueba de V3.
      - **Alcance:** comprueba que el trigger funciona cuando el servicio real de Auth crea el usuario, y que el borrado en cascada (`on delete cascade`) elimina el perfil cuando Auth borra la cuenta. No cubre todavía el envío de `nombre_visible` desde el frontend (el Dashboard no lo envía) y no es una validación completa de la aplicación.
-   - **Pendiente:** revisar el Security Advisor.
+   - Security Advisor de la base de datos: **revisado** el 2026-10-24 con `npx supabase db advisors --linked --type security`. Dio 3 avisos `WARN`, documentados con su decisión en `docs/security/threat-model.md`; no se cambió ningún permiso.
+   - **Pendiente:** revisión complementaria de la configuración de seguridad de Auth desde el Dashboard. La salida de la CLI no la incluyó.
 7. **Commit en Git** con las migraciones y las pruebas.
 
 Cada paso se revisa antes de pasar al siguiente.

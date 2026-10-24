@@ -70,7 +70,44 @@ Decisión: RLS es el mecanismo principal de aislamiento (ADR-0002). Requisitos:
 
 RLS no es la única defensa: se combina con restricciones, triggers y validación en RPC y Edge Functions.
 
+## Revisión del Security Advisor de `nexo-dev` (2026-10-24)
+Comando: `npx supabase db advisors --linked --type security --level info` (CLI 2.120.0), tras aplicar la migración `20261024161000_esquema_base_organizaciones.sql`. Resultado: **3 avisos `WARN`, ninguno `ERROR` y ninguno `INFO`**. No se modificaron funciones, permisos, políticas ni triggers a raíz de esta revisión.
+
+| # | Aviso | Objeto | Decisión provisional |
+|---|---|---|---|
+| 1 | `anon_security_definer_function_executable` (0028) | `public.rls_auto_enable()` | Se conserva; aviso registrado. |
+| 2 | `authenticated_security_definer_function_executable` (0029) | `public.crear_organizacion(p_nombre text)` | Intencional; aviso aceptado. |
+| 3 | `authenticated_security_definer_function_executable` (0029) | `public.rls_auto_enable()` | Se conserva; aviso registrado. |
+
+### Avisos 1 y 3: `public.rls_auto_enable()`
+- **Qué es:** la función y el event trigger `ensure_rls` del RLS automático de `nexo-dev`, que no están en las migraciones del repositorio (ver ADR-0004, "RLS automático de `nexo-dev`").
+  - La función existe, devuelve `event_trigger`, no recibe argumentos y su definición coincide con la revisada antes del primer `db push`.
+  - **Su procedencia y quién la gestiona no están confirmadas.**
+- **Prueba controlada:** una única petición `POST /rest/v1/rpc/rls_auto_enable`, sin sesión, con la clave pública y cuerpo `{}`.
+  - Resultado: **HTTP 400**, código PostgreSQL `0A000`, mensaje `cannot display a value of type event_trigger`.
+  - La llamada RPC fue **rechazada** y la respuesta **no fue 2xx**.
+- **Lo que no se demostró:**
+  - El punto exacto en que PostgreSQL rechazó la operación.
+  - Que el cuerpo de la función no llegara a ejecutarse. Es lo más probable, porque no apareció el error propio de `pg_event_trigger_ddl_commands()` fuera de un event trigger, pero no es concluyente.
+  - Que el comportamiento se mantenga en futuras versiones de Supabase o PostgREST.
+- **Decisión provisional:** conservar la función y el event trigger, registrar los avisos y **no cambiar sus permisos** hasta tener motivos y evidencia adicionales. El permiso `execute` de `anon` y `authenticated` sigue concedido.
+
+### Aviso 2: `public.crear_organizacion(p_nombre text)`
+- **Decisión:** el acceso de `authenticated` es **intencional**. Es la única vía para crear una organización junto con su membresía `propietario`, en una sola transacción. Los usuarios no tienen permiso de `insert` en `organizaciones`, `membresias` ni `auditoria`.
+  - La función comprueba `auth.uid()`, valida el nombre y genera el `id` en el servidor.
+  - `anon` no puede ejecutarla: el Advisor no la marca para `anon`, y lo comprueba `rls_activado.test.sql`.
+- **Evidencia:** las 101 comprobaciones pgTAP pasaron en CI, incluidas las de `crear_organizacion.test.sql`. Eso no elimina todos los riesgos posibles.
+- **Situación conocida:**
+  - Los inicios de sesión anónimos están **desactivados** en `nexo-dev`, según comprobó el propietario.
+  - No se ha confirmado en esta revisión el estado de la opción general que permite registrarse con una cuenta normal.
+  - **No existe un límite de organizaciones por usuario.** Los límites de uso y la prevención de creación abusiva son una cuestión de diseño pendiente, no una corrección implementada.
+
+### Alcance de esta revisión
+El Advisor comprueba patrones de configuración, no la lógica de las políticas (por ejemplo, el aislamiento entre organizaciones, que cubren las pruebas pgTAP). La salida de la CLI no incluyó avisos sobre la configuración de Auth; la revisión complementaria de Auth desde el Dashboard sigue pendiente. Que solo aparezcan estos tres avisos **no significa que no existan otros riesgos**.
+
 ## Riesgos residuales y asuntos pendientes
+- `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").
+- Permiso `execute` de `anon` y `authenticated` sobre `public.rls_auto_enable()`, configuración externa al repositorio: confirmar su procedencia y gestión antes de decidir si se retira.
 - Confirmar cómo gestionará la sesión el frontend de Stitch (cliente puro o renderizado en servidor).
 - Rate limiting de la Data API frente a abuso por usuarios autenticados.
 - Definir retención y eliminación de datos (incluido `auth.users` y auditoría).
