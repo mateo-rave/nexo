@@ -53,7 +53,7 @@ select results_eq(
 );
 
 select results_eq(
-  $$select a.nombre
+  $$select a.nombre collate "default"
     from pg_proc p, unnest(p.proargnames, p.proargmodes) as a(nombre, modo)
     where p.oid = 'public.agregar_miembro(uuid, text, public.rol_membresia)'::regprocedure
       and a.modo = 't'
