@@ -99,13 +99,35 @@ Comando: `npx supabase db advisors --linked --type security --level info` (CLI 2
 - **Evidencia:** las 101 comprobaciones pgTAP pasaron en CI, incluidas las de `crear_organizacion.test.sql`. Eso no elimina todos los riesgos posibles.
 - **Situación conocida:**
   - Los inicios de sesión anónimos están **desactivados** en `nexo-dev`, según comprobó el propietario.
-  - No se ha confirmado en esta revisión el estado de la opción general que permite registrarse con una cuenta normal.
+  - El registro normal de cuentas está **habilitado**. Se confirmó después, en la revisión de Auth desde el Dashboard (ver la sección siguiente).
   - **No existe un límite de organizaciones por usuario.** Los límites de uso y la prevención de creación abusiva son una cuestión de diseño pendiente, no una corrección implementada.
 
 ### Alcance de esta revisión
-El Advisor comprueba patrones de configuración, no la lógica de las políticas (por ejemplo, el aislamiento entre organizaciones, que cubren las pruebas pgTAP). La salida de la CLI no incluyó avisos sobre la configuración de Auth; la revisión complementaria de Auth desde el Dashboard sigue pendiente. Que solo aparezcan estos tres avisos **no significa que no existan otros riesgos**.
+El Advisor comprueba patrones de configuración, no la lógica de las políticas (por ejemplo, el aislamiento entre organizaciones, que cubren las pruebas pgTAP). La salida de la CLI no incluyó avisos sobre la configuración de Auth; esa revisión se hizo aparte, desde el Dashboard (ver la sección siguiente). Que solo aparezcan estos tres avisos **no significa que no existan otros riesgos**.
+
+## Revisión de la configuración de Auth de `nexo-dev` (Dashboard, 2026-10-24)
+El propietario revisó las opciones de autenticación en el Dashboard de Supabase. Es una revisión distinta del Security Advisor de la base de datos (sección anterior) y no cambia sus tres avisos.
+
+| Opción | Estado observado |
+|---|---|
+| Permitir registros normales | Habilitado |
+| Vinculación manual de identidades | Desactivada |
+| Inicios de sesión anónimos | Desactivados |
+| Confirmación de correo electrónico | Habilitada |
+| Protección CAPTCHA | Desactivada |
+| Protección contra contraseñas filtradas | Desactivada |
+| Longitud mínima de contraseña | **Cambiada de 6 a 8 caracteres** durante la revisión |
+| Requisitos adicionales de caracteres | **No verificado:** la opción no aparecía en la pantalla revisada |
+
+- Este es el único cambio de configuración: el mínimo de contraseña. Se hizo a mano en el Dashboard de `nexo-dev` y no está en ninguna migración.
+- La revisión de configuración de Auth desde el Dashboard queda **realizada**. **No significa que la seguridad de Nexo esté terminada.**
+- **Antes de un lanzamiento público** hay que evaluar:
+  - la protección CAPTCHA;
+  - la protección contra contraseñas filtradas;
+  - los requisitos adicionales de caracteres de las contraseñas, que no pudieron verificarse.
 
 ## Riesgos residuales y asuntos pendientes
+- Antes de un lanzamiento público: evaluar CAPTCHA, la protección contra contraseñas filtradas y los requisitos adicionales de caracteres de las contraseñas (ver "Revisión de la configuración de Auth de `nexo-dev`").
 - `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").
 - Permiso `execute` de `anon` y `authenticated` sobre `public.rls_auto_enable()`, configuración externa al repositorio: confirmar su procedencia y gestión antes de decidir si se retira.
 - Confirmar cómo gestionará la sesión el frontend de Stitch (cliente puro o renderizado en servidor).

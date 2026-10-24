@@ -80,7 +80,7 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - Una consulta de solo lectura (`npx supabase db query --linked`) confirmó su perfil, con `nombre_visible = 'Usuario'` y 0 membresías.
 - Tras borrarlo desde el Dashboard, otra consulta de solo lectura confirmó 0 cuentas, 0 perfiles y 0 membresías residuales.
 - **Límites:** no cubre el envío de `nombre_visible` desde el frontend y no valida la aplicación completa.
-- El Security Advisor de la base de datos ya se revisó (2026-10-24, ver `docs/security/threat-model.md`). **Sigue pendiente** la revisión complementaria de la configuración de Auth desde el Dashboard.
+- El Security Advisor de la base de datos ya se revisó (2026-10-24, ver `docs/security/threat-model.md`). La configuración de Auth se revisó desde el Dashboard el mismo día y se subió a mano el mínimo de contraseña de 6 a 8 caracteres (detalle y asuntos previos a un lanzamiento público en `docs/security/threat-model.md`).
 
 ## Entornos
 - **Local:** Supabase CLI, datos sintéticos, claves locales generadas por la CLI.
