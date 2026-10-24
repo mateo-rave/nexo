@@ -70,7 +70,8 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - `npx supabase start` aplicó `20261024161000_esquema_base_organizaciones.sql` y `20261024194726_gestion_miembros.sql`, y `npx supabase test db --local` ejecutó los once archivos, todos con `ok`.
 - Resumen: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
 - Avisos sin efecto en el resultado: límites de descarga (`toomanyrequests`) de `public.ecr.aws`, que la CLI resolvió descargando de `ghcr.io`.
-- Se ejecutaron contra la base local y desechable de CI, no contra `nexo-dev`, donde la migración 2 todavía no está aplicada (pendiente según `migration list --linked` y `db push --dry-run --linked` del 2026-10-24).
+- Se ejecutaron contra la base local y desechable de CI, no contra `nexo-dev`. En ese momento la migración 2 aún estaba pendiente en `nexo-dev` (según `migration list --linked` y `db push --dry-run --linked`); se aplicó después (ver "Aplicación de la migración 2 en `nexo-dev`").
+- La ejecución `40130589952` (commit `af374f669664385bd8493da134ae64cda0965f4d`, solo documentación), inmediatamente anterior a la aplicación, dio el mismo resultado: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
 
 **Validación anterior de la migración 2:** ejecución `40128981309` del 2026-10-24 (`push`, commit `2c21c0ebda80a7cf5675516c318e5c2fd31d7ec9`), con el mismo resultado: `All tests successful.`, `Files=11, Tests=199`, `Result: PASS`.
 - La ejecución anterior con la migración 2, `40128592605` (commit `9447e8f`), **falló**: un error de intercalación (*collation*) en una comprobación de `agregar_miembro.test.sql` detuvo ese archivo (`Files=11, Tests=170`, `Result: FAIL`). Se corrigió la prueba, no la migración.
@@ -90,6 +91,34 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 - Tras borrarlo desde el Dashboard, otra consulta de solo lectura confirmó 0 cuentas, 0 perfiles y 0 membresías residuales.
 - **Límites:** no cubre el envío de `nombre_visible` desde el frontend y no valida la aplicación completa.
 - El Security Advisor de la base de datos ya se revisó (2026-10-24, ver `docs/security/threat-model.md`). La configuración de Auth se revisó desde el Dashboard el mismo día y se subió a mano el mínimo de contraseña de 6 a 8 caracteres (detalle y asuntos previos a un lanzamiento público en `docs/security/threat-model.md`).
+
+**Aplicación de la migración 2 en `nexo-dev` (2026-10-24, 20:41 UTC):**
+- **Sin respaldo verificado** de `nexo-dev` (opción A aceptada por el propietario). La reversión manual está en "Reversión manual de la migración 2"; no se ha ejecutado.
+- **Antes de aplicar:**
+  - repositorio sincronizado en `af374f6`, sin cambios locales, con CI `40130589952` en verde;
+  - `projects list`: `nexo-dev`, referencia `ixjupmbusvntlatgxmsi`, `ACTIVE_HEALTHY`, `linked: true`;
+  - `migration list --linked`: `20261024161000` aplicada; `20261024194726` solo en local;
+  - `db push --dry-run --linked`: única migración pendiente `20261024194726_gestion_miembros.sql`.
+- **Aplicación:** `npx supabase db push --linked` (CLI 2.120.0), entre 20:41:15 y 20:41:20 UTC. Salida: `Applying migration 20261024194726_gestion_miembros.sql...`, `Finished supabase db push.`, código de salida 0. Sin seeds ni roles. No se ejecutó ningún otro SQL ni se tocó el historial de migraciones.
+- **Después de aplicar:**
+  - `migration list --linked`: ambas migraciones en local y remoto;
+  - `db push --dry-run --linked`: `Remote database is up to date.`;
+  - una consulta de solo lectura a `pg_proc` (`npx supabase db query --linked`) confirmó las seis funciones con `search_path` vacío:
+
+| Función | `security definer` | Volatilidad | `execute` para `anon` | `execute` para `authenticated` |
+|---|---|---|---|---|
+| `privado.exigir_read_committed()` | no | `volatile` | no | no |
+| `privado.buscar_usuario_confirmado(text)` | sí | `stable` | no | no |
+| `public.agregar_miembro(uuid, text, rol_membresia)` | sí | `volatile` | no | sí |
+| `public.cambiar_rol_miembro(uuid, uuid, rol_membresia)` | sí | `volatile` | no | sí |
+| `public.quitar_miembro(uuid, uuid)` | sí | `volatile` | no | sí |
+| `public.salir_de_organizacion(uuid)` | sí | `volatile` | no | sí |
+
+- **Security Advisor** (`npx supabase db advisors --linked --type security --level info`), antes y después:
+  - **antes:** 3 `WARN`, los ya documentados en `docs/security/threat-model.md` (0028 y 0029 de `public.rls_auto_enable()`, 0029 de `public.crear_organizacion`);
+  - **después:** 7 `WARN`, ningún `ERROR` ni `INFO`. Siguen los mismos 3, más 4 nuevos `authenticated_security_definer_function_executable` (0029), uno por cada RPC: `agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro` y `salir_de_organizacion`;
+  - los 4 nuevos eran esperados: las RPC son `security definer` y ejecutables por `authenticated` por diseño (ver migración 2 y `docs/security/permissions.md`). No se modificó nada para silenciarlos.
+- **Límites:** las RPC no se han llamado en `nexo-dev`; su comportamiento solo está probado con pgTAP en la base desechable de CI. No se ha hecho ninguna prueba de API con `supabase-js`.
 
 ## Entornos
 - **Local:** Supabase CLI, datos sintéticos, claves locales generadas por la CLI.
