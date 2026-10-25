@@ -14,5 +14,7 @@ Una decisión debe incluir contexto, opciones consideradas, decisión tomada, co
 | [0003](0003-separacion-api-datos-sql-edge-functions.md) | Separación entre Data API, SQL y Edge Functions | Aceptada (provisional) |
 | [0004](0004-entornos-migraciones-y-pruebas.md) | Gestión de entornos, migraciones y pruebas | Aceptada (provisional) |
 | [0005](0005-nombres-en-espanol.md) | Nombres del código en español (incluye el glosario oficial) | Aceptada |
+| [0006](0006-frontend-propio-con-react.md) | Frontend propio con React en el repositorio | Aceptada |
+| [0007](0007-modelo-proyectos-tareas-estados-flujos.md) | Modelo de proyectos, tareas, estados y flujos | Aceptada |
 
 La ADR-0001 sustituye la preferencia inicial por Django/DRF/Celery/Redis que figuraba en `CLAUDE.md` (no existía una ADR previa).

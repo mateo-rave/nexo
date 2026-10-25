@@ -225,7 +225,7 @@ Regla: en cada escritura denegada se comprueba, además, que la fila objetivo **
    - Security Advisor de la base de datos: **revisado** el 2026-10-24 con `npx supabase db advisors --linked --type security`. Tras la migración 1 dio 3 avisos `WARN`. Tras la migración 2 dio 7 `WARN`: los mismos 3, más 4 de tipo 0029, uno por cada RPC nueva. Ninguno es `ERROR` ni `INFO`. Están documentados con su decisión en `docs/security/threat-model.md`, y no se cambió ningún permiso.
    - Configuración de seguridad de Auth desde el Dashboard: **revisada** el 2026-10-24. Se subió el mínimo de contraseña de 6 a 8 caracteres; los estados observados están en `docs/security/threat-model.md`.
      - Quedan para antes de un lanzamiento público: CAPTCHA (desactivado), la protección contra contraseñas filtradas (desactivada) y los requisitos adicionales de caracteres, que no pudieron verificarse porque la opción no aparecía.
-7. **Commit en Git** con las migraciones y las pruebas.
+7. **Commit en Git** con las migraciones y las pruebas: **hecho**. Commits `e16163f` (migración 1, pruebas pgTAP y workflow de CI), `9447e8f` (migración 2) y `46b4b62` (pruebas de integración de API).
 
 Cada paso se revisa antes de pasar al siguiente.
 

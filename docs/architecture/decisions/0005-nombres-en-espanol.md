@@ -159,7 +159,7 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Tokens de color (variables CSS) | En español y con guiones, como exige CSS: `--fondo`, `--superficie`, `--superficie-elevada`, `--acento`, `--texto`, `--texto-secundario`, `--exito`, `--atencion`, `--error`, `--informacion`, `--sobre-acento` y los derivados `--borde`, `--borde-fuerte` y `--<color>-suave`. En Tailwind se usan como `bg-fondo`, `text-texto-2`, `border-borde`… |
 | Tema | Atributo `data-tema` en `<html>`, con valores `claro` y `oscuro`; preferencia `sistema`, `claro` u `oscuro`, guardada en `localStorage` con la clave `nexo-tema` (ausente = seguir al sistema). |
 | Vistas (hash de la URL) | `#/` (portada) y `#/demostracion` (panel de demostración). |
-| Señales de una tarea (se superponen al estado del flujo) | `bloqueada`, `vencida` y `en_riesgo` (tipo `TipoSenal`). «En riesgo»: vence en 48 horas o menos y aún no ha vencido. |
+| Señales de una tarea en el panel de demostración (se superponen al estado del flujo) | `bloqueada`, `vencida` y `en_riesgo` (tipo `TipoSenal`). «En riesgo»: vence en 48 horas o menos y aún no ha vencido. Solo existen en la demostración: el bloqueo manual y «en riesgo» quedan fuera del MVP (ADR-0007). |
 | Motivos de espera (ilustrativos, no existen en el backend) | `cliente`, `equipo` e `informacion` (tipo `EsperandoA`). |
 | Componentes del panel de demostración | `NecesitaIntervencion`, `ContextoOperativo`, `ProximosVencimientos`, `EsperandoA`, `FlujoTareas`, `ActividadReciente`, `EtiquetaSenal` y `Pista` (pista contextual accesible). |
 | Utilidades CSS de movimiento | `transicion`, `linea-activa`, `entrada` (entrada escalonada, con la variable `--retraso`) y `aparecer`. |

@@ -41,7 +41,7 @@ Estado: inicial, adaptado a la arquitectura provisional con Supabase ([ADR-0001]
 - Funciones auxiliares de autorización en un esquema no expuesto, `security definer` con `search_path = ''`.
 - `anon` sin permisos sobre datos de negocio.
 - Vistas con `security_invoker = true`.
-- Clave publicable en el frontend; claves secretas solo en secretos de Edge Functions o herramientas de servidor; búsqueda automática de secretos en CI.
+- Clave publicable en el frontend; claves secretas solo en secretos de Edge Functions o herramientas de servidor; búsqueda automática de secretos en CI (pendiente de implementar, ver `docs/qa/test-strategy.md`).
 - Edge Functions con el JWT del usuario por defecto; uso justificado y auditado de la clave secreta.
 - Pruebas negativas de aislamiento entre organizaciones (pgTAP y API).
 - Contraseñas y sesiones gestionadas por Supabase Auth; confirmación de correo; MFA a evaluar.

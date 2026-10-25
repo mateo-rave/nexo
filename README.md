@@ -9,7 +9,7 @@ El público inicial (pequeñas agencias digitales y equipos de servicios) es una
 - **Backend (Supabase), en construcción:**
   - **Hecho y probado:** esquema base, autenticación con Supabase Auth, organizaciones y membresías (crear organizaciones; agregar, cambiar de rol, quitar y salir de miembros), con RLS y auditoría. Son las dos migraciones de [`supabase/migrations/`](supabase/migrations/), aplicadas en el proyecto de desarrollo.
   - **Pendiente:** las funcionalidades de negocio: proyectos, tareas, flujos de trabajo y automatizaciones.
-- **Frontend: decidido, todavía sin implementar.** Será propio, en este repositorio, con Vite, React, TypeScript y Tailwind CSS ([ADR-0006](docs/architecture/decisions/0006-frontend-propio-con-react.md)). El despliegue previsto es Vercel, todavía sin configurar.
+- **Frontend, en construcción:** aplicación propia en [`frontend/`](frontend/), con Vite, React, TypeScript y Tailwind CSS ([ADR-0006](docs/architecture/decisions/0006-frontend-propio-con-react.md)). Hoy tiene la portada y un panel de demostración con **datos ficticios**: todavía no está conectado al backend y el CI aún no lo compila ni lo comprueba. El despliegue previsto es Vercel, todavía sin configurar.
 - **Pruebas:** pgTAP para la base de datos y pruebas de integración de la API con Deno y `supabase-js`. Se ejecutan en GitHub Actions contra un Supabase local y desechable.
 
 El detalle del avance está en el plan de la fase 1: [`docs/plans/`](docs/plans/).
@@ -20,6 +20,7 @@ El detalle del avance está en el plan de la fase 1: [`docs/plans/`](docs/plans/
 |---|---|
 | [`CLAUDE.md`](CLAUDE.md) | Reglas permanentes del proyecto: alcance, arquitectura, identidad visual, seguridad, pruebas y convenciones de nombres. |
 | [`docs/`](docs/) | Producto (`product/`), arquitectura y decisiones ADR (`architecture/`), planes por fase (`plans/`), estrategia de pruebas (`qa/`), seguridad y permisos (`security/`) y operaciones (`operations/`). |
+| [`frontend/`](frontend/) | Aplicación web (Vite, React, TypeScript y Tailwind CSS) con su propio `package.json` y `package-lock.json`. Scripts: `dev`, `build`, `typecheck`, `lint` y `preview`. |
 | [`supabase/`](supabase/) | Configuración local de Supabase (`config.toml`), migraciones SQL (`migrations/`) y pruebas pgTAP (`tests/`). |
 | [`pruebas/api/`](pruebas/api/) | Pruebas de integración de la API con Deno y `supabase-js` (`deno.json` y `deno.lock` con versiones fijadas). |
 | [`.github/workflows/`](.github/workflows/) | CI: `pruebas-base-datos.yml` levanta un Supabase local, aplica las migraciones y ejecuta las pruebas pgTAP y de API. |
@@ -39,6 +40,6 @@ No subas archivos `.env` ni claves secretas al repositorio: `.env.example` es so
 
 ## Documentación clave
 
-- Arquitectura: [`docs/architecture/overview.md`](docs/architecture/overview.md) y decisiones en [`docs/architecture/decisions/`](docs/architecture/decisions/) (ADR-0001 a ADR-0006).
+- Arquitectura: [`docs/architecture/overview.md`](docs/architecture/overview.md) y decisiones en [`docs/architecture/decisions/`](docs/architecture/decisions/) (ADR-0001 a ADR-0007).
 - Pruebas: [`docs/qa/test-strategy.md`](docs/qa/test-strategy.md).
 - Seguridad: [`docs/security/threat-model.md`](docs/security/threat-model.md) y [`docs/security/permissions.md`](docs/security/permissions.md).
