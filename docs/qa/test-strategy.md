@@ -62,7 +62,7 @@ Comprobaciones globales:
 - Ninguna tabla de esquemas expuestos tiene RLS deshabilitado.
 - Las vistas expuestas usan `security_invoker`.
 - Las funciones `security definer` fijan `search_path`.
-- Ninguna clave secreta aparece en el bundle del frontend ni en el repositorio (búsqueda automática en CI). **Pendiente de implementar:** el workflow actual no la ejecuta; solo filtra las claves de su propio registro (salida de `supabase start`).
+- Ninguna clave secreta aparece en el bundle del frontend ni en el repositorio (búsqueda automática en CI). **Implementada en parte:** el job `frontend` del workflow falla si el bundle contiene `sb_secret_` o `service_role`. Sigue pendiente la búsqueda en el repositorio; el workflow solo filtra además las claves de su propio registro (salida de `supabase start`).
 
 ## Pruebas del motor de automatización
 - Una regla válida se ejecuta y queda una ejecución `exitosa` con versión de regla, timestamps y resultado.

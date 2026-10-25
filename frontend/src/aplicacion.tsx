@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { PanelDemostracion } from "./demostracion/panel_demostracion.tsx";
+import { Espacio } from "./espacio/espacio.tsx";
 import { Portada } from "./portada/portada.tsx";
 import { useVista } from "./ruta/ruta.ts";
 import { useTema } from "./tema/tema.ts";
@@ -7,6 +8,7 @@ import { useTema } from "./tema/tema.ts";
 const titulos = {
     portada: "Nexo · Que nada se quede a mitad de camino",
     demostracion: "Panel (demostración) · Nexo",
+    espacio: "Nexo",
 } as const;
 
 export function Aplicacion() {
@@ -33,6 +35,8 @@ export function Aplicacion() {
             </a>
             {vista === "demostracion" ? (
                 <PanelDemostracion preferencia={preferencia} alElegirTema={elegirPreferencia} />
+            ) : vista === "espacio" ? (
+                <Espacio preferencia={preferencia} alElegirTema={elegirPreferencia} />
             ) : (
                 <Portada preferencia={preferencia} alElegirTema={elegirPreferencia} />
             )}

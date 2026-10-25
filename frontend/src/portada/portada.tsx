@@ -1,7 +1,7 @@
 import { ArrowRight, CalendarClock, History, Inbox, ListTree } from "lucide-react";
 import { MarcaNexo } from "../componentes/simbolo_nexo.tsx";
 import { SelectorTema } from "../componentes/selector_tema.tsx";
-import { enlaceDemostracion } from "../ruta/ruta.ts";
+import { enlaceDemostracion, enlaceEspacio } from "../ruta/ruta.ts";
 import type { PreferenciaTema } from "../tema/tema.ts";
 import { DiagramaFlujo } from "./diagrama_flujo.tsx";
 
@@ -47,6 +47,12 @@ export function Portada({ preferencia, alElegirTema }: Propiedades) {
                         className="transicion hidden rounded-lg px-3 py-2 text-sm font-medium text-texto-2 hover:bg-elevada hover:text-texto sm:inline-flex"
                     >
                         Demostración
+                    </a>
+                    <a
+                        href={enlaceEspacio}
+                        className="transicion inline-flex rounded-lg border border-borde-fuerte px-3 py-2 text-sm font-medium text-texto hover:bg-elevada"
+                    >
+                        Entrar
                     </a>
                 </div>
             </header>

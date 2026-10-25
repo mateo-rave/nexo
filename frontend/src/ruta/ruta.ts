@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
 
-// Dos vistas en esta entrega: no hace falta un enrutador. El hash permite
-// enlazar la demostración y que el botón "atrás" del navegador funcione.
-export type Vista = "portada" | "demostracion";
+// Tres vistas: no hace falta un enrutador. El hash permite enlazarlas y que el
+// botón "atrás" del navegador funcione.
+// - portada;
+// - demostracion: panel con datos ficticios, identificados como tales;
+// - espacio: la aplicación conectada al backend real (requiere sesión).
+export type Vista = "portada" | "demostracion" | "espacio";
 
 export const enlaceDemostracion = "#/demostracion";
+export const enlaceEspacio = "#/app";
 export const enlacePortada = "#/";
 
 function vistaActual(): Vista {
-    return window.location.hash === enlaceDemostracion ? "demostracion" : "portada";
+    const hash = window.location.hash;
+    if (hash === enlaceDemostracion) return "demostracion";
+    if (hash === enlaceEspacio || hash.startsWith(`${enlaceEspacio}/`)) return "espacio";
+    return "portada";
 }
 
 export function useVista(): Vista {
