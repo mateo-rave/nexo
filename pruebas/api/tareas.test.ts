@@ -1,8 +1,12 @@
-// Pruebas de integración de API: proyectos y tareas (fase 2, bloque 2; ADR-0007).
-// Complementan supabase/tests/proyectos_tareas.test.sql: comprueban a través
-// de la Data API, con la clave publicable y la sesión de cada usuario, los
-// permisos, el aislamiento, las transiciones, los vencimientos, el cambio de
-// zona horaria y la salida de miembros.
+// Pruebas de integración de API: proyectos, tareas y detección de vencidas
+// (fase 2, bloques 2 y 3; ADR-0007). Complementan
+// supabase/tests/proyectos_tareas.test.sql y deteccion_vencimientos.test.sql:
+// comprueban a través de la Data API, con la clave publicable y la sesión de
+// cada usuario, los permisos, el aislamiento, las transiciones, los
+// vencimientos, el cambio de zona horaria, la salida de miembros y los
+// hallazgos y notificaciones que crea el job programado.
+// Van en un solo archivo porque cada archivo registra sus propios usuarios y
+// el Supabase local limita los registros (auth.rate_limit.sign_in_sign_ups).
 
 import assert from "node:assert/strict";
 import {
@@ -55,7 +59,29 @@ const rechazosTareas = {
         "transicion_no_permitida",
         "El flujo del proyecto no permite ese cambio de estado.",
     ),
+    hallazgo_no_encontrado: rechazoPropio(
+        404,
+        "hallazgo_no_encontrado",
+        "El hallazgo no existe o no tienes acceso a él.",
+    ),
+    hallazgo_ya_resuelto: rechazoPropio(409, "hallazgo_ya_resuelto", "El hallazgo ya está resuelto."),
+    notificacion_no_encontrada: rechazoPropio(
+        404,
+        "notificacion_no_encontrada",
+        "La notificación no existe o no tienes acceso a ella.",
+    ),
 };
+
+type Hallazgo = {
+    id: string;
+    tarea_id: string;
+    tipo: string;
+    resuelto_en: string | null;
+    resuelto_por: string | null;
+    evidencia: Record<string, unknown>;
+};
+
+type Notificacion = { id: string; hallazgo_id: string; leida_en: string | null };
 
 // El instante tal como lo serializa PostgREST, normalizado a UTC.
 function instante(valor: string | null): string | null {
@@ -106,6 +132,46 @@ async function leerAuditoria(lector: Usuario, organizacionId: string): Promise<A
         throw new Error(`No se pudo leer la auditoría: ${error.message}`);
     }
     return data as Auditoria[];
+}
+
+async function leerHallazgos(lector: Usuario, tareaId: string): Promise<Hallazgo[]> {
+    const { data, error } = await lector.cliente.supabase
+        .from("hallazgos")
+        .select("id, tarea_id, tipo, resuelto_en, resuelto_por, evidencia")
+        .eq("tarea_id", tareaId);
+    if (error) {
+        throw new Error(`No se pudieron leer los hallazgos: ${error.message}`);
+    }
+    return data as Hallazgo[];
+}
+
+async function leerNotificaciones(lector: Usuario, hallazgoId: string): Promise<Notificacion[]> {
+    const { data, error } = await lector.cliente.supabase
+        .from("notificaciones")
+        .select("id, hallazgo_id, leida_en")
+        .eq("hallazgo_id", hallazgoId);
+    if (error) {
+        throw new Error(`No se pudieron leer las notificaciones: ${error.message}`);
+    }
+    return data as Notificacion[];
+}
+
+// La detección no se puede llamar desde la API: la ejecuta el job de Cron
+// cada minuto. Se espera, consultando cada pocos segundos, a que aparezca el
+// hallazgo; así se prueba también la comprobación programada de extremo a
+// extremo.
+async function esperarHallazgo(lector: Usuario, tareaId: string): Promise<Hallazgo> {
+    const limiteMs = 150_000;
+    const inicio = Date.now();
+    while (Date.now() - inicio < limiteMs) {
+        const hallazgos = await leerHallazgos(lector, tareaId);
+        if (hallazgos.length > 0) {
+            assert.equal(hallazgos.length, 1, "un solo hallazgo por fecha límite");
+            return hallazgos[0];
+        }
+        await new Promise((resolver) => setTimeout(resolver, 5_000));
+    }
+    throw new Error(`El job de Cron no creó el hallazgo en ${limiteMs / 1000} s.`);
 }
 
 Deno.test("crear_tarea: sin sesión, la llamada se rechaza", async () => {
@@ -294,4 +360,65 @@ Deno.test("salir_de_organizacion: las tareas quedan sin responsable y se audita 
         recurso_id: tarea.id,
         detalles: { responsable_anterior: usuarios.miembro_a.id, motivo: "membresia_eliminada" },
     }]);
+});
+
+Deno.test("detección programada: hallazgo y notificación de una tarea vencida", async () => {
+    const escenario = await prepararEscenario();
+    const { usuarios } = escenario;
+    const proyectoId = await crearProyecto(escenario);
+
+    // Un día de hace tres días: sin hora vence a las 00:00 del día siguiente
+    // en Bogotá, que ya pasó.
+    const haceTresDias = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const tarea = await crearTarea(usuarios.miembro_a, proyectoId, {
+        p_titulo: "Vencida",
+        p_responsable_id: usuarios.miembro_a.id,
+        p_fecha_limite: haceTresDias,
+    });
+
+    const hallazgo = await esperarHallazgo(usuarios.miembro_a, tarea.id);
+    assert.equal(hallazgo.tipo, "tarea_vencida");
+    assert.equal(hallazgo.evidencia.titulo, "Vencida");
+    assert.equal(hallazgo.evidencia.fecha_limite, haceTresDias);
+    assert.equal(hallazgo.resuelto_en, null);
+
+    // Aislamiento y destinatarios
+    assert.deepEqual(await leerHallazgos(usuarios.propietario_b, tarea.id), []);
+    const propias = await leerNotificaciones(usuarios.miembro_a, hallazgo.id);
+    assert.equal(propias.length, 1, "el responsable recibe una notificación");
+    assert.equal(propias[0].leida_en, null);
+    assert.deepEqual(await leerNotificaciones(usuarios.administrador_a, hallazgo.id), []);
+
+    // Marcar como leída: solo la propia
+    const ajena = await llamarRpc(usuarios.administrador_a.cliente, "marcar_notificacion_leida", {
+        p_notificacion_id: propias[0].id,
+    });
+    comprobarRechazo(ajena, rechazosTareas.notificacion_no_encontrada);
+
+    const leida = await llamarRpc(usuarios.miembro_a.cliente, "marcar_notificacion_leida", {
+        p_notificacion_id: propias[0].id,
+    });
+    comprobarExito(leida, 200);
+    assert.notEqual((leida.datos as Notificacion).leida_en, null);
+
+    // Resolver: el responsable puede; otra organización no
+    const intruso = await llamarRpc(usuarios.propietario_b.cliente, "resolver_hallazgo", {
+        p_hallazgo_id: hallazgo.id,
+    });
+    comprobarRechazo(intruso, rechazosTareas.hallazgo_no_encontrado);
+
+    const resuelto = await llamarRpc(usuarios.miembro_a.cliente, "resolver_hallazgo", {
+        p_hallazgo_id: hallazgo.id,
+    });
+    comprobarExito(resuelto, 200);
+    assert.equal((resuelto.datos as Hallazgo).resuelto_por, usuarios.miembro_a.id);
+
+    const otraVez = await llamarRpc(usuarios.miembro_a.cliente, "resolver_hallazgo", {
+        p_hallazgo_id: hallazgo.id,
+    });
+    comprobarRechazo(otraVez, rechazosTareas.hallazgo_ya_resuelto);
+
+    // La siguiente pasada del job no duplica el hallazgo
+    await new Promise((resolver) => setTimeout(resolver, 65_000));
+    assert.equal((await leerHallazgos(usuarios.miembro_a, tarea.id)).length, 1);
 });
