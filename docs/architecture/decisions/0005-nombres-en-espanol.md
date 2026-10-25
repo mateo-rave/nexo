@@ -149,6 +149,32 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Job del workflow `pruebas-base-datos.yml` | id `pgtap` sin cambios; nombre visible "pgTAP y API en Supabase local" |
 | Variables de entorno de las pruebas | `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` (nombres de Supabase, ya en la lista de excepciones) |
 
+### Añadidos con la primera entrega del frontend (ADR-0006, 2026-10-24)
+| Elemento | Nombre oficial |
+|---|---|
+| Carpeta de la aplicación | `frontend/`, con su propio `package.json` y `package-lock.json` |
+| Variables públicas del frontend | `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. **El prefijo `VITE_` lo impone Vite y hace que el valor se incluya en el código que llega al navegador**: cualquiera puede leerlo. Solo admite la URL de Supabase y su clave publicable; nunca claves `sb_secret_`, `service_role`, contraseñas ni otros secretos. Aún no se usan en el código: el frontend no está conectado al backend. |
+| Archivos de código | `snake_case`: `aplicacion.tsx`, `estilos.css`, `tema/tema.ts`, `ruta/ruta.ts`, `componentes/` (`simbolo_nexo.tsx`, `selector_tema.tsx`, `etiqueta_estado.tsx`, `estados.ts`, `pista.tsx`), `portada/` (`portada.tsx`, `diagrama_flujo.tsx`) y `demostracion/` (`panel_demostracion.tsx`, `secciones_panel.tsx`, `datos_demostracion.ts`, `derivados.ts`). `main.tsx`, `index.html`, `vite.config.ts`, `tsconfig*.json` y `.oxlintrc.json` conservan el nombre que esperan las herramientas. |
+| Hooks de React | Prefijo `use` obligatorio, porque React y su lint solo reconocen así los hooks: `useTema`, `useVista`. El resto del nombre, en español. |
+| Tokens de color (variables CSS) | En español y con guiones, como exige CSS: `--fondo`, `--superficie`, `--superficie-elevada`, `--acento`, `--texto`, `--texto-secundario`, `--exito`, `--atencion`, `--error`, `--informacion`, `--sobre-acento` y los derivados `--borde`, `--borde-fuerte` y `--<color>-suave`. En Tailwind se usan como `bg-fondo`, `text-texto-2`, `border-borde`… |
+| Tema | Atributo `data-tema` en `<html>`, con valores `claro` y `oscuro`; preferencia `sistema`, `claro` u `oscuro`, guardada en `localStorage` con la clave `nexo-tema` (ausente = seguir al sistema). |
+| Vistas (hash de la URL) | `#/` (portada) y `#/demostracion` (panel de demostración). |
+| Señales de una tarea en el panel de demostración (se superponen al estado del flujo) | `bloqueada`, `vencida` y `en_riesgo` (tipo `TipoSenal`). «En riesgo»: vence en 48 horas o menos y aún no ha vencido. Solo existen en la demostración: el bloqueo manual y «en riesgo» quedan fuera del MVP (ADR-0007). |
+| Motivos de espera (ilustrativos, no existen en el backend) | `cliente`, `equipo` e `informacion` (tipo `EsperandoA`). |
+| Componentes del panel de demostración | `NecesitaIntervencion`, `ContextoOperativo`, `ProximosVencimientos`, `EsperandoA`, `FlujoTareas`, `ActividadReciente`, `EtiquetaSenal` y `Pista` (pista contextual accesible). |
+| Utilidades CSS de movimiento | `transicion`, `linea-activa`, `entrada` (entrada escalonada, con la variable `--retraso`) y `aparecer`. |
+| Scripts de npm del frontend | `dev`, `build`, `typecheck`, `lint` y `preview`: nombres estándar que esperan las herramientas y Vercel. |
+
+### Añadidos con los flujos versionados (ADR-0007, fase 2, 2026-10-25)
+| Elemento | Nombre oficial |
+|---|---|
+| Tipos | `estado_tarea` (`pendiente`, `en_curso`, `en_revision`, `completada`, `cancelada`) y `estado_version_flujo` (`borrador`, `publicada`) |
+| Tablas | `definiciones_flujo`, `versiones_flujo`, `estados_version_flujo` y `transiciones_version_flujo` |
+| Columnas | `zona_horaria` (en `organizaciones`); `es_predeterminado`; `definicion_flujo_id`, `numero`, `estado_inicial` y `publicada_en` (en `versiones_flujo`); `version_flujo_id`; `estado_origen` y `estado_destino` |
+| Funciones internas (`privado`) | `es_estado_terminal`, `transicion_permitida`, `crear_flujo_predeterminado`; de triggers: `validar_zona_horaria`, `proteger_version_flujo`, `proteger_contenido_version_flujo` y `crear_flujo_al_crear_organizacion` |
+| Códigos de error (`detail`) | `zona_horaria_invalida`, `publicacion_directa_no_permitida`, `version_publicada_inmutable`, `version_flujo_inmutable`, `estado_inicial_no_incluido` y `sin_estado_terminal` |
+| Nombre del flujo creado automáticamente | «Flujo predeterminado» |
+
 **Convenciones de código TypeScript** (decisión del 2026-10-24): los nombres siguen en español, pero cada lenguaje conserva su estilo habitual.
 - Funciones, variables y propiedades propias en `camelCase`: `prepararEscenario`, `llamarRpc`, `estadoHttp`, `organizacionA`.
 - Tipos, interfaces y clases en `PascalCase`: `ResultadoRpc`, `RechazoEsperado`, `FotoEstado`. Los componentes de React también, porque JSX exige que empiecen por mayúscula (ADR-0006).

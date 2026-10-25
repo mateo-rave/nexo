@@ -81,6 +81,7 @@ Producción nunca se usa para pruebas ni para ejecutar `db reset`.
 
 ### Datos de prueba
 - `supabase/seed.sql` con datos sintéticos: al menos dos organizaciones, usuarios con cada rol, un usuario sin membresía, proyectos y tareas con fechas vencidas y no vencidas.
+- **Estado (2026-10-24): `supabase/seed.sql` todavía no existe.** Las pruebas pgTAP y de API crean sus propios datos. Como `config.toml` tiene la semilla activada (`[db.seed]`), CI muestra el aviso `no files matched pattern: supabase/seed.sql`, sin efecto en el resultado. Cuándo crearla se decide en el plan de la fase 2, cuando existan proyectos y tareas.
 - Sin correos, nombres ni datos reales. Dominios de ejemplo (`example.com`).
 
 ### Pruebas

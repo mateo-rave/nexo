@@ -62,7 +62,7 @@ Comprobaciones globales:
 - Ninguna tabla de esquemas expuestos tiene RLS deshabilitado.
 - Las vistas expuestas usan `security_invoker`.
 - Las funciones `security definer` fijan `search_path`.
-- Ninguna clave secreta aparece en el bundle del frontend ni en el repositorio (búsqueda automática en CI).
+- Ninguna clave secreta aparece en el bundle del frontend ni en el repositorio (búsqueda automática en CI). **Pendiente de implementar:** el workflow actual no la ejecuta; solo filtra las claves de su propio registro (salida de `supabase start`).
 
 ## Pruebas del motor de automatización
 - Una regla válida se ejecuta y queda una ejecución `exitosa` con versión de regla, timestamps y resultado.

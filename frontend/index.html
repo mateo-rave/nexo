@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es" data-tema="claro">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Nexo conecta cada solicitud con su proyecto, sus tareas y su resultado. Vista previa en desarrollo."
+    />
+    <link rel="icon" type="image/svg+xml" href="/simbolo.svg" />
+    <title>Nexo</title>
+    <!--
+      Aplica el tema antes del primer pintado para evitar un destello del tema
+      equivocado: la elección guardada o, si no hay, la preferencia del sistema.
+      Debe coincidir con src/tema/tema.ts. Si se añade una política CSP, este
+      script necesitará su hash.
+    -->
+    <script>
+      (function () {
+        var tema = null;
+        try {
+          tema = localStorage.getItem("nexo-tema");
+        } catch (error) {}
+        if (tema !== "claro" && tema !== "oscuro") {
+          tema = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+        }
+        document.documentElement.dataset.tema = tema;
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="raiz"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

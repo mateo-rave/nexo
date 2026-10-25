@@ -77,3 +77,6 @@ supabase/functions/.env
 # Deno y Vercel
 .deno/
 .vercel/
+
+# Skills de Claude Code instaladas localmente (código de terceros; procedencia en skills-lock.json)
+.claude/skills/
