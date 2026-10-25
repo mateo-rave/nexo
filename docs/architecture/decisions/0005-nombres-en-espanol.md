@@ -165,6 +165,15 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Utilidades CSS de movimiento | `transicion`, `linea-activa`, `entrada` (entrada escalonada, con la variable `--retraso`) y `aparecer`. |
 | Scripts de npm del frontend | `dev`, `build`, `typecheck`, `lint` y `preview`: nombres estándar que esperan las herramientas y Vercel. |
 
+### Añadidos con la integración del frontend (fase 3, 2026-10-25)
+| Elemento | Nombre oficial |
+|---|---|
+| Archivos | `supabase/cliente.ts` y `supabase/errores.ts` (cliente y mensajes de error), `sesion/sesion.ts` y `espacio/` (`espacio.tsx`, `acceso.tsx`, `proyectos.tsx`, `tareas.tsx`, `notificaciones.tsx`, `datos.ts`, `carga.ts`, `ui.tsx`) |
+| Hooks | `useSesion` y `useCarga` |
+| Vista y almacenamiento | Vista `espacio` en `#/app` (aplicación conectada al backend); la organización mostrada se recuerda en `localStorage` con la clave `nexo-organizacion` |
+| Componentes | `Espacio`, `Acceso`, `Proyectos`, `TareasProyecto`, `FilaTarea`, `Notificaciones`, `Aviso`, `AvisoError`, `Cargando`, `EsqueletoLista` y `Campo`; clases compartidas `claseBotonPrincipal`, `claseBotonSecundario`, `claseBotonFila` y `claseCampo` |
+| Pruebas E2E | `frontend/e2e/recorrido.spec.ts` (Playwright, configuración en `frontend/playwright.config.ts`) y script de npm `e2e`; en CI, job `frontend` (tipos, lint, build y comprobación de claves en el bundle) y pasos E2E en el job `pgtap` |
+
 ### Añadidos con los flujos versionados (ADR-0007, fase 2, 2026-10-25)
 | Elemento | Nombre oficial |
 |---|---|

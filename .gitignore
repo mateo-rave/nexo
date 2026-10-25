@@ -78,5 +78,10 @@ supabase/functions/.env
 .deno/
 .vercel/
 
+# Resultados de Playwright (pruebas E2E del frontend)
+test-results/
+playwright-report/
+blob-report/
+
 # Skills de Claude Code instaladas localmente (código de terceros; procedencia en skills-lock.json)
 .claude/skills/

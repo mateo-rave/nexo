@@ -4,6 +4,7 @@ import {
     CalendarX2,
     CircleCheck,
     CircleDashed,
+    CircleX,
     Clock,
     Eye,
     type LucideIcon,
@@ -13,7 +14,9 @@ import {
 // Estado del flujo: uno solo por tarea.
 // -----------------------------------------------------------------------------
 
-export type EstadoTarea = "pendiente" | "en_curso" | "en_revision" | "completada";
+// Catálogo del backend (tipo estado_tarea, ADR-0007). La demostración no usa
+// cancelada.
+export type EstadoTarea = "pendiente" | "en_curso" | "en_revision" | "completada" | "cancelada";
 
 // Un estado nunca se comunica solo con color: siempre icono y texto (CLAUDE.md, sección 4).
 export const estilosEstado: Record<
@@ -44,6 +47,12 @@ export const estilosEstado: Record<
         Icono: CircleCheck,
         clases: "bg-exito-suave text-exito",
         barra: "bg-exito",
+    },
+    cancelada: {
+        etiqueta: "Cancelada",
+        Icono: CircleX,
+        clases: "bg-elevada text-texto-2",
+        barra: "bg-texto-2/45",
     },
 };
 

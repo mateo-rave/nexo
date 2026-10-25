@@ -1,8 +1,10 @@
-# Ejecuta las pruebas pgTAP de supabase/tests/ y después las pruebas de
-# integración de API de pruebas/api/ (Deno + supabase-js) contra un mismo
-# Supabase local y desechable, creado en el servidor de GitHub a partir de las
-# migraciones del repositorio. No se conecta a nexo-dev ni a ningún proyecto
-# remoto: no usa --linked, db push ni secretos. Ver ADR-0004.
+# Ejecuta las pruebas pgTAP de supabase/tests/, las pruebas de integración de
+# API de pruebas/api/ (Deno + supabase-js) y las pruebas E2E del frontend
+# (Playwright) contra un mismo Supabase local y desechable, creado en el
+# servidor de GitHub a partir de las migraciones del repositorio. Otro job
+# comprueba los tipos, el lint y el build del frontend. No se conecta a
+# nexo-dev ni a ningún proyecto remoto: no usa --linked, db push ni secretos.
+# Ver ADR-0004 y ADR-0006.
 name: Pruebas de base de datos
 
 on:
@@ -21,11 +23,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  frontend:
+    name: Frontend (tipos, lint y build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar las dependencias del frontend
+        run: npm ci
+
+      - name: Comprobar los tipos
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Sin variables VITE_: el bundle no lleva ninguna clave.
+      - name: Compilar
+        run: npm run build
+
+      # El frontend solo puede llevar la clave publicable (ADR-0006).
+      - name: Comprobar que el bundle no contiene claves secretas
+        run: |
+          if grep -R -l -E 'sb_secret_|service_role' dist; then
+            echo "::error::El bundle del frontend contiene una referencia a una clave secreta." >&2
+            exit 1
+          fi
+          echo "El bundle no contiene claves secretas."
+
   pgtap:
-    name: pgTAP y API en Supabase local
+    name: pgTAP, API y E2E en Supabase local
     # Los servidores Ubuntu de GitHub ya traen Docker, que necesita la CLI.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
 
     steps:
       # Acciones fijadas por SHA de commit (no por etiqueta) para que nadie
@@ -40,6 +85,9 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
 
       # Instala exactamente la versión de la CLI fijada en package-lock.json.
       - name: Instalar la CLI de Supabase
@@ -120,3 +168,30 @@ jobs:
             deno test --frozen \
               --allow-env=SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY \
               --allow-net="$servidor"
+
+      # Pruebas E2E del frontend contra el mismo Supabase local: compila el
+      # frontend con la URL y la clave publicable locales (como en las pruebas
+      # de API, nada más sale de "supabase status") y Playwright lo recorre en
+      # Chromium sobre "vite preview".
+      - name: Instalar las dependencias del frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Instalar Chromium para Playwright
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Ejecutar las pruebas E2E del frontend
+        run: |
+          estado="$(npx supabase status -o env)"
+          url="$(printf '%s\n' "$estado" | sed -n -E 's/^API_URL="?([^"]*)"?$/\1/p')"
+          clave="$(printf '%s\n' "$estado" | sed -n -E 's/^PUBLISHABLE_KEY="?([^"]*)"?$/\1/p')"
+          unset estado
+          if [ -z "$url" ] || [ -z "$clave" ]; then
+            echo "No se pudieron leer API_URL y PUBLISHABLE_KEY del Supabase local." >&2
+            exit 1
+          fi
+          echo "::add-mask::$clave"
+          cd frontend
+          VITE_SUPABASE_URL="$url" VITE_SUPABASE_PUBLISHABLE_KEY="$clave" npm run build
+          npm run e2e

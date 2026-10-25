@@ -106,7 +106,13 @@ export function motivoSinResultados(filtros: TipoSenal[]): string {
 }
 
 export function recuentoPorEstado(tareas: TareaDemostracion[]): Record<EstadoTarea, number> {
-    const recuento: Record<EstadoTarea, number> = { pendiente: 0, en_curso: 0, en_revision: 0, completada: 0 };
+    const recuento: Record<EstadoTarea, number> = {
+        pendiente: 0,
+        en_curso: 0,
+        en_revision: 0,
+        completada: 0,
+        cancelada: 0,
+    };
     for (const tarea of tareas) recuento[tarea.estado] += 1;
     return recuento;
 }
@@ -117,6 +123,7 @@ export function bloqueadasPorEstado(lista: TareaConSenales[]): Record<EstadoTare
         en_curso: [],
         en_revision: [],
         completada: [],
+        cancelada: [],
     };
     for (const { tarea, senales } of lista) {
         if (tieneSenal(senales, "bloqueada")) grupos[tarea.estado].push(tarea);
