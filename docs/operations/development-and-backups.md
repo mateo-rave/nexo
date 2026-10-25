@@ -22,6 +22,12 @@ No presuponer que estas herramientas están disponibles: comprobarlas antes de c
 
 **Comandos interactivos:** `npx supabase login` abre el navegador y `npx supabase link` pide la contraseña de la base de datos. Los ejecuta **el propietario en su propia terminal**, para que la contraseña no pase por ningún chat ni registro.
 
+**Skills de Claude Code (decisión del 2026-10-24):** se instalan localmente en `.claude/skills/`, que está en `.gitignore`: su código es de terceros y no se versiona dentro de Nexo.
+- `skills-lock.json`, en la raíz del repositorio, se conserva como registro de procedencia (repositorio de origen, ruta y huella de cada skill). **No garantiza recuperar las mismas versiones:** no fija commits, etiquetas ni ramas, así que reinstalar desde él puede traer una versión más reciente.
+- Para reproducir exactamente una versión en el futuro, hay que registrar y verificar el commit concreto del repositorio de origen.
+- Son herramientas auxiliares y criterios de revisión. No pueden imponerse sobre la identidad visual, las decisiones de arquitectura ni los requisitos documentados de Nexo (`CLAUDE.md`, ADR y `docs/`).
+- Algunas incluyen scripts (Node.js, lanzadores que descargan binarios). No se ejecutan scripts de terceros sin autorización explícita.
+
 ## Desarrollo (flujo vigente: proyecto en la nube, sin Docker)
 Decisión del 2026-10-23 (ADR-0004). La cuenta de Supabase y el proyecto `nexo-dev` ya existen, y el propietario lo enlazó con la CLI (`npx supabase link`, referencia `ixjupmbusvntlatgxmsi`; el vínculo local está en `supabase/.temp/`, que no se versiona).
 
