@@ -8,7 +8,8 @@ El público inicial (pequeñas agencias digitales y equipos de servicios) es una
 
 - **Backend (Supabase), en construcción:**
   - **Hecho y probado:** esquema base, autenticación con Supabase Auth, organizaciones y membresías (crear organizaciones; agregar, cambiar de rol, quitar y salir de miembros), con RLS y auditoría. Son las dos migraciones de [`supabase/migrations/`](supabase/migrations/), aplicadas en el proyecto de desarrollo.
-  - **Pendiente:** las funcionalidades de negocio: proyectos, tareas, flujos de trabajo y automatizaciones.
+  - **En curso (fase 2):** flujos versionados con flujo predeterminado y zona horaria por organización (migración `20261025034000_flujos_y_zona_horaria.sql`, ADR-0007). Escrita con sus pruebas pgTAP; todavía no se ha ejecutado en CI ni aplicado en el proyecto de desarrollo.
+  - **Pendiente:** proyectos, tareas y automatizaciones.
 - **Frontend, en construcción:** aplicación propia en [`frontend/`](frontend/), con Vite, React, TypeScript y Tailwind CSS ([ADR-0006](docs/architecture/decisions/0006-frontend-propio-con-react.md)). Hoy tiene la portada y un panel de demostración con **datos ficticios**: todavía no está conectado al backend y el CI aún no lo compila ni lo comprueba. El despliegue previsto es Vercel, todavía sin configurar.
 - **Pruebas:** pgTAP para la base de datos y pruebas de integración de la API con Deno y `supabase-js`. Se ejecutan en GitHub Actions contra un Supabase local y desechable.
 
