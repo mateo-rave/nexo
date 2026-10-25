@@ -1,6 +1,7 @@
-// Pruebas de integración de API: proyectos, tareas y detección de vencidas
-// (fase 2, bloques 2 y 3; ADR-0007). Complementan
-// supabase/tests/proyectos_tareas.test.sql y deteccion_vencimientos.test.sql:
+// Pruebas de integración de API: proyectos, tareas, detección de vencidas y
+// flujos personalizados (fase 2, bloques 2 a 4; ADR-0007). Complementan
+// supabase/tests/proyectos_tareas.test.sql, deteccion_vencimientos.test.sql
+// y gestion_flujos.test.sql:
 // comprueban a través de la Data API, con la clave publicable y la sesión de
 // cada usuario, los permisos, el aislamiento, las transiciones, los
 // vencimientos, el cambio de zona horaria, la salida de miembros y los
@@ -70,7 +71,20 @@ const rechazosTareas = {
         "notificacion_no_encontrada",
         "La notificación no existe o no tienes acceso a ella.",
     ),
+    version_flujo_no_encontrada: rechazoPropio(
+        404,
+        "version_flujo_no_encontrada",
+        "La versión del flujo no existe o no tienes acceso a ella.",
+    ),
+    transiciones_invalidas: rechazoPropio(
+        400,
+        "transiciones_invalidas",
+        "Las transiciones deben ser una lista de pares de origen y destino válidos.",
+    ),
+    version_ya_publicada: rechazoPropio(409, "version_ya_publicada", "La versión ya está publicada."),
 };
+
+type VersionFlujo = { id: string; numero: number; estado: string; estado_inicial: string };
 
 type Hallazgo = {
     id: string;
@@ -360,6 +374,72 @@ Deno.test("salir_de_organizacion: las tareas quedan sin responsable y se audita 
         recurso_id: tarea.id,
         detalles: { responsable_anterior: usuarios.miembro_a.id, motivo: "membresia_eliminada" },
     }]);
+});
+
+Deno.test("flujos personalizados: crear, guardar, publicar y usar en un proyecto", async () => {
+    const escenario = await prepararEscenario();
+    const { usuarios, organizacionA } = escenario;
+    const administrador = usuarios.administrador_a.cliente;
+
+    const creado = await llamarRpc(administrador, "crear_flujo", {
+        p_organizacion_id: organizacionA,
+        p_nombre: "Soporte",
+    });
+    comprobarExito(creado, 200);
+    const borrador = creado.datos as VersionFlujo;
+    assert.equal(borrador.numero, 1);
+    assert.equal(borrador.estado, "borrador");
+
+    const contenido = {
+        p_version_flujo_id: borrador.id,
+        p_estados: ["pendiente", "completada"],
+        p_estado_inicial: "pendiente",
+        p_transiciones: [{ origen: "pendiente", destino: "completada" }],
+    };
+
+    const deMiembro = await llamarRpc(usuarios.miembro_a.cliente, "guardar_borrador_flujo", contenido);
+    comprobarRechazo(deMiembro, rechazos.permiso_denegado);
+
+    const malformado = await llamarRpc(administrador, "guardar_borrador_flujo", {
+        ...contenido,
+        p_transiciones: [{ origen: "pendiente" }],
+    });
+    comprobarRechazo(malformado, rechazosTareas.transiciones_invalidas);
+
+    comprobarExito(await llamarRpc(administrador, "guardar_borrador_flujo", contenido), 200);
+
+    const intruso = await llamarRpc(usuarios.propietario_b.cliente, "publicar_version_flujo", {
+        p_version_flujo_id: borrador.id,
+    });
+    comprobarRechazo(intruso, rechazosTareas.version_flujo_no_encontrada);
+
+    const publicada = await llamarRpc(administrador, "publicar_version_flujo", {
+        p_version_flujo_id: borrador.id,
+    });
+    comprobarExito(publicada, 200);
+    assert.equal((publicada.datos as VersionFlujo).estado, "publicada");
+
+    const otraVez = await llamarRpc(administrador, "publicar_version_flujo", {
+        p_version_flujo_id: borrador.id,
+    });
+    comprobarRechazo(otraVez, rechazosTareas.version_ya_publicada);
+
+    // Un proyecto nuevo con esta versión: sus tareas siguen el flujo propio.
+    const proyecto = await llamarRpc(administrador, "crear_proyecto", {
+        p_organizacion_id: organizacionA,
+        p_nombre: "Soporte",
+        p_version_flujo_id: borrador.id,
+    });
+    comprobarExito(proyecto, 200);
+    const tarea = await crearTarea(usuarios.miembro_a, (proyecto.datos as { id: string }).id, {
+        p_titulo: "Incidencia",
+    });
+    const cierre = await llamarRpc(usuarios.miembro_a.cliente, "cambiar_estado_tarea", {
+        p_tarea_id: tarea.id,
+        p_estado: "completada",
+    });
+    comprobarExito(cierre, 200);
+    assert.equal((cierre.datos as Tarea).estado, "completada");
 });
 
 Deno.test("detección programada: hallazgo y notificación de una tarea vencida", async () => {

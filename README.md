@@ -11,8 +11,9 @@ El público inicial (pequeñas agencias digitales y equipos de servicios) es una
   - **En curso (fase 2, ADR-0007):**
     - flujos versionados con flujo predeterminado y zona horaria por organización (`20261025034000_flujos_y_zona_horaria.sql`): pruebas aprobadas en CI; sin aplicar en el proyecto de desarrollo;
     - proyectos y tareas, con sus RPC (`20261025150000_proyectos_y_tareas.sql`): pruebas aprobadas en CI; sin aplicar en el proyecto de desarrollo;
-    - detección de tareas vencidas cada minuto con Supabase Cron, hallazgos deduplicados y notificaciones internas (`20261025200000_deteccion_vencimientos.sql`): escrita con pruebas pgTAP y de API, pendiente de ejecutar en CI.
-  - **Pendiente:** gestión de flujos propios desde la API y reglas de automatización.
+    - detección de tareas vencidas cada minuto con Supabase Cron, hallazgos deduplicados y notificaciones internas (`20261025200000_deteccion_vencimientos.sql`): pruebas aprobadas en CI; sin aplicar en el proyecto de desarrollo;
+    - gestión de flujos personalizados: crear, guardar borradores, copiar y publicar versiones (`20261025230000_gestion_flujos.sql`): escrita con pruebas pgTAP y de API, pendiente de ejecutar en CI.
+  - **Pendiente:** reglas de automatización.
 - **Frontend, en construcción:** aplicación propia en [`frontend/`](frontend/), con Vite, React, TypeScript y Tailwind CSS ([ADR-0006](docs/architecture/decisions/0006-frontend-propio-con-react.md)). Hoy tiene la portada y un panel de demostración con **datos ficticios**: todavía no está conectado al backend y el CI aún no lo compila ni lo comprueba. El despliegue previsto es Vercel, todavía sin configurar.
 - **Pruebas:** pgTAP para la base de datos y pruebas de integración de la API con Deno y `supabase-js`. Se ejecutan en GitHub Actions contra un Supabase local y desechable.
 
