@@ -175,6 +175,17 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Códigos de error (`detail`) | `zona_horaria_invalida`, `publicacion_directa_no_permitida`, `version_publicada_inmutable`, `version_flujo_inmutable`, `estado_inicial_no_incluido` y `sin_estado_terminal` |
 | Nombre del flujo creado automáticamente | «Flujo predeterminado» |
 
+### Añadidos con proyectos y tareas (ADR-0007, fase 2, 2026-10-25)
+| Elemento | Nombre oficial |
+|---|---|
+| Tablas | `proyectos` y `tareas` |
+| Columnas | `version_flujo_id`, `archivado_en` (en `proyectos`); `proyecto_id`, `titulo`, `descripcion`, `responsable_id`, `fecha_limite` y `vence_en` (en `tareas`) |
+| RPC | `crear_proyecto`, `archivar_proyecto`, `crear_tarea`, `editar_tarea`, `asignar_responsable`, `cambiar_estado_tarea`, `eliminar_tarea` y `cambiar_zona_horaria` |
+| Argumentos de RPC | `p_proyecto_id`, `p_tarea_id`, `p_titulo`, `p_descripcion`, `p_responsable_id`, `p_fecha_limite`, `p_hora_limite`, `p_estado`, `p_version_flujo_id`, `p_archivado` y `p_zona_horaria` |
+| Funciones internas (`privado`) | `vence_en_de_fecha`, `tarea_vencida`, `autorizar_escritura_tarea`, `bloquear_tarea`, `puede_gestionar_tarea`, `validar_responsable`, `validar_texto_tarea`, `vence_en_con_hora`; de triggers: `proteger_proyecto`, `preparar_tarea` y `retirar_responsable_de_tareas` |
+| Acciones de auditoría | `proyecto.creado`, `proyecto.archivado`, `proyecto.desarchivado`, `tarea.creada`, `tarea.editada`, `tarea.reasignada`, `tarea.estado_cambiado`, `tarea.eliminada`, `tarea.responsable_retirado` y `organizacion.zona_horaria_cambiada` |
+| Códigos de error (`detail`) | `proyecto_no_encontrado`, `tarea_no_encontrada`, `proyecto_archivado`, `proyecto_sin_cambios`, `archivado_invalido`, `version_flujo_no_disponible`, `version_proyecto_inmutable`, `proyecto_inmutable`, `titulo_invalido`, `descripcion_invalida`, `responsable_no_es_miembro`, `responsable_sin_cambios`, `hora_sin_fecha`, `estado_invalido`, `estado_sin_cambios`, `transicion_no_permitida`, `tarea_sin_cambios` y `zona_horaria_sin_cambios` |
+
 **Convenciones de código TypeScript** (decisión del 2026-10-24): los nombres siguen en español, pero cada lenguaje conserva su estilo habitual.
 - Funciones, variables y propiedades propias en `camelCase`: `prepararEscenario`, `llamarRpc`, `estadoHttp`, `organizacionA`.
 - Tipos, interfaces y clases en `PascalCase`: `ResultadoRpc`, `RechazoEsperado`, `FotoEstado`. Los componentes de React también, porque JSX exige que empiecen por mayúscula (ADR-0006).

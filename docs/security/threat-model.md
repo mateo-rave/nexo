@@ -184,6 +184,7 @@ Estado: **implementada; pruebas pgTAP aprobadas en CI; aplicada en `nexo-dev` el
 
 ## Riesgos residuales y asuntos pendientes
 - Gestión de miembros: D6 (un propietario puede quitar a otro), D7 (rechazos sin auditoría), D8 (sin límite de intentos en `agregar_miembro`) y el posible bloqueo mutuo al borrar la cuenta de un propietario (ver "Gestión de miembros").
+- Tareas (ADR-0007): mismo tipo de bloqueo mutuo en un caso estrecho. Si se borra una cuenta desde Auth mientras otra persona asigna a esa misma cuenta una tarea, el borrado ya tiene bloqueada la membresía y espera a la organización, y la asignación tiene la organización y espera a la membresía para comprobar la clave foránea. PostgreSQL cancela una de las dos, sin datos a medias. Las RPC (`quitar_miembro`, `salir_de_organizacion`) no lo sufren, porque bloquean la organización antes que la membresía.
 - Pruebas de integración de las RPC de gestión de miembros a través de la API: aprobadas en el Supabase local de CI (`40134690914`); pendiente decidir si y cómo probarlas contra `nexo-dev`.
 - Antes de un lanzamiento público: evaluar CAPTCHA, la protección contra contraseñas filtradas y los requisitos adicionales de caracteres de las contraseñas (ver "Revisión de la configuración de Auth de `nexo-dev`").
 - `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").

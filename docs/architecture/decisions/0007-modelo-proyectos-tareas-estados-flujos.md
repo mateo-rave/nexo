@@ -79,8 +79,8 @@
 - **Deduplicación de hallazgos** (principio para la fase de detección): la clave usa la fecha límite tal como la eligió el usuario (el día si no tiene hora; el instante si la tiene), nunca el instante recalculado. Un cambio de zona no duplica un hallazgo; un cambio de fecha límite sí puede generar uno nuevo.
 
 ### 4. Salida de un miembro
-- Al borrarse una membresía (con `quitar_miembro`, `salir_de_organizacion` o al eliminarse la cuenta), las tareas en las que esa persona era responsable quedan **sin responsable**: la FK vacía solo `responsable_id` (`on delete set null (responsable_id)`, disponible desde PostgreSQL 15).
-- Esa acción automática ejecuta los triggers de fila de `tareas`. El trigger de auditoría la registra como **acción del sistema** (actor vacío) cuando la membresía del responsable anterior ya no existe; una reasignación hecha por una persona registra a su autor.
+- Al borrarse una membresía (con `quitar_miembro`, `salir_de_organizacion` o al eliminarse la cuenta), las tareas en las que esa persona era responsable quedan **sin responsable**.
+- *Ajuste de implementación (2026-10-25):* lo hace un trigger `before delete` sobre `membresias` (`privado.retirar_responsable_de_tareas`), no la FK con `on delete set null (responsable_id)`. La FK de responsable queda sin acción de borrado. El trigger bloquea la organización, vacía el responsable de esas tareas e inserta en la auditoría una fila por tarea (`tarea.responsable_retirado`) con actor vacío: la **acción del sistema** queda registrada de forma explícita, sin deducirla después. Funciona en cualquier versión de PostgreSQL, así que no depende de verificar la de `nexo-dev`. Si el borrado se rechaza después (por ejemplo, el último propietario), todo se deshace, incluida la auditoría. Una reasignación hecha por una persona (RPC) registra a su autor.
 - Las RPC de la migración 2 no se modifican: el efecto sobre las tareas lo produce la FK.
 
 ### 5. Conceptos de la demostración
@@ -94,7 +94,7 @@
   - Una migración nueva del módulo `flujos` (`20261025034000_flujos_y_zona_horaria.sql`) crea los tipos de estado, las tablas de flujos (con RLS, permisos explícitos y `revoke execute ... from public, anon` en cada función), los triggers de inmutabilidad, la función y el trigger del flujo predeterminado con su relleno, y la columna `zona_horaria` con su validación. La RPC que cambia la zona va con proyectos y tareas, porque debe recalcular sus vencimientos.
   - Proyectos y tareas van en la migración siguiente (fase 2).
 - **Contrato de `crear_organizacion`:** la función no se modifica; conserva su firma (`p_nombre text`), sus permisos y sus pruebas. Como devuelve la fila completa (`returns public.organizaciones`), su respuesta y la de la Data API incluirán `zona_horaria`: cambio aditivo que debe documentarse en la API.
-- **Orden de bloqueos (amplía ADR-0004):** organización → membresías → tareas. Una RPC de tareas no debe bloquear membresías después de bloquear una tarea, para no producir un bloqueo mutuo con `quitar_miembro`.
+- **Orden de bloqueos (amplía ADR-0004):** organización → membresías → tareas. Implementado así (migración `20261025150000_proyectos_y_tareas.sql`): las RPC de tareas bloquean primero la organización con `for share` y después la tarea, sin bloquear membresías; las que cambian miembros, el trigger de salida y `cambiar_zona_horaria` bloquean la organización con `for no key update`, que choca con `for share`. Así se ordenan entre sí sin ciclos.
 - **Nombres:** el tipo de estado, las tablas de estados y transiciones de cada versión, las columnas (`zona_horaria`, `fecha_limite`, `vence_en`, `responsable_id`), las RPC y las acciones de auditoría nuevas se añaden al glosario de ADR-0005 antes de usarlos.
 - **Ventajas:** detección y métricas uniformes; flujos con contenido real sin validar `jsonb`; la base de datos impide relaciones entre organizaciones y transiciones fuera del flujo; el modelo admite añadir después señales de bloqueo, inactividad (RF-031) y etiquetas propias de estado.
 - **Compromisos:**
@@ -104,7 +104,7 @@
   - un `miembro` responsable puede cancelar o reabrir sus tareas aunque no pueda eliminarlas (queda auditado);
   - una organización de otra zona verá vencimientos en hora de Bogotá hasta cambiar la suya (el frontend debería pedir confirmarla al crearla).
 - **Riesgos:** varias superficies nuevas de aislamiento; una zona mal configurada adelanta o retrasa vencimientos; las pruebas de API de tareas necesitarán más usuarios de prueba que el límite actual del Supabase local de CI (30 registros o inicios de sesión cada 5 minutos).
-- **Pendiente de verificar antes de la migración:** la versión de PostgreSQL de `nexo-dev`. Si fuera anterior a la 15, `responsable_id` se vaciaría con un trigger en lugar de la FK, sin cambiar el resto de esta decisión.
+- **Versión de PostgreSQL:** al usar un trigger en lugar de `on delete set null (responsable_id)`, ya no hace falta verificar la versión de `nexo-dev`.
 
 ## Cómo se verificará
 Pruebas pgTAP y de integración de API, en CI:
