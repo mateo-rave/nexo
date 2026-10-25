@@ -77,7 +77,7 @@ Estado: borrador para validar. Los requisitos no validados deben tratarse como h
 6. Se notifica al usuario correspondiente.
 7. Un usuario de otra organización no puede leer, modificar, borrar ni ejecutar acciones sobre esos datos, ni siquiera llamando directamente a la API.
 8. Las pruebas críticas (incluidas las de políticas RLS) pasan en un entorno reproducible: Supabase local o CI.
-9. La API está documentada y puede ser consumida por el frontend creado en Stitch usando solo la clave publicable.
+9. La API está documentada y puede ser consumida por el frontend del repositorio (ADR-0006) usando solo la clave publicable.
 
 ## Hipótesis por validar
 - El público objetivo priorizado sufre estos problemas con frecuencia.

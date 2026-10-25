@@ -188,7 +188,7 @@ Estado: **implementada; pruebas pgTAP aprobadas en CI; aplicada en `nexo-dev` el
 - Antes de un lanzamiento público: evaluar CAPTCHA, la protección contra contraseñas filtradas y los requisitos adicionales de caracteres de las contraseñas (ver "Revisión de la configuración de Auth de `nexo-dev`").
 - `crear_organizacion` sin límite de organizaciones por usuario: decidir límites de uso y prevención de creación abusiva (ver "Revisión del Security Advisor de `nexo-dev`").
 - Permiso `execute` de `anon` y `authenticated` sobre `public.rls_auto_enable()`, configuración externa al repositorio: confirmar su procedencia y gestión antes de decidir si se retira.
-- Confirmar cómo gestionará la sesión el frontend de Stitch (cliente puro o renderizado en servidor).
+- Sesión del frontend: resuelto por ADR-0006 (SPA; la sesión de Supabase vive en el navegador). Pendiente: mitigar el riesgo de XSS sobre el token (sin HTML sin escapar) y decidir una política de seguridad de contenido (CSP).
 - Rate limiting de la Data API frente a abuso por usuarios autenticados.
 - Definir retención y eliminación de datos (incluido `auth.users` y auditoría).
 - Revisar obligaciones legales aplicables en los mercados de operación y región de alojamiento del proyecto Supabase.

@@ -21,7 +21,7 @@ Comprueban tablas, restricciones, triggers, políticas RLS y funciones RPC de un
 Pruebas TypeScript con `supabase-js` que actúan como el frontend: inician sesión con usuarios de prueba y llaman a la Data API, RPC y Edge Functions. Demuestran que lo probado en SQL también se cumple a través de la API pública con la clave publicable. CI usa una base efímera; nunca datos locales ni producción.
 
 ### 4. E2E
-Cuando el frontend de Stitch esté integrado, Playwright probará los flujos principales desde la interfaz. Antes de eso, el recorrido completo se prueba con pruebas de integración de API.
+Cuando exista el frontend propio (ADR-0006), Playwright probará los flujos principales desde la interfaz. Antes de eso, el recorrido completo se prueba con pruebas de integración de API.
 
 ## Pruebas de permisos (obligatorias)
 Cada permiso de [docs/security/permissions.md](../security/permissions.md) necesita **dos** pruebas: una que demuestre que el rol autorizado **sí** puede hacerlo y otra que demuestre que un rol no autorizado **no** puede. Probar solo los rechazos no basta: una política que lo deniega todo también los pasaría.
@@ -105,7 +105,7 @@ Comprobaciones globales:
 | SQL, RLS, triggers, RPC | pgTAP vía `supabase test db` (`supabase/tests/`); opcional `supabase-test-helpers`. | Supabase local (Docker) o CI. |
 | Edge Functions | `deno test`. | Deno; integración además Supabase local/CI/desarrollo. |
 | Integración de API | `deno test` + `supabase-js` (un solo runtime con las Edge Functions), en `pruebas/api/`. Decidido el 2026-10-24: Deno 2.9.8 y `npm:@supabase/supabase-js@2.118.0`. | Supabase local de CI. |
-| E2E | Playwright. | Frontend integrado. |
+| E2E | Playwright. | Frontend en el repositorio (ADR-0006). |
 | Lint/formato | `deno fmt`, `deno lint`, `supabase db lint`, Security/Performance Advisors. | Deno, Supabase CLI. |
 | CI | GitHub Actions con Supabase CLI (los runners Linux incluyen Docker). | Repositorio en GitHub. |
 

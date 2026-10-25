@@ -9,7 +9,7 @@ Estado: provisional. Escenario objetivo: Supabase (backend) + Vercel (frontend).
 | Supabase CLI | Migraciones, entorno local, pruebas pgTAP, tipos, despliegue de Edge Functions | Instalada con npm como dependencia del proyecto: 2.120.0 (`npm install` la restaura) |
 | Docker Desktop (con WSL 2 en Windows) | `supabase start`, `db reset`, `test db` y `functions serve` locales | No instalado (no se usará por ahora) |
 | Deno | Edge Functions, sus pruebas y pruebas de API | No instalado |
-| Node.js | Ejecutar la Supabase CLI con `npx`; herramientas del frontend de Stitch | Instalado (v24) |
+| Node.js | Ejecutar la Supabase CLI con `npx`; herramientas del frontend (Vite, ADR-0006) | Instalado (v24) |
 | Cuenta de Supabase | Proyectos de desarrollo y producción | Creada; proyecto `nexo-dev` creado por el propietario |
 | Cuenta de Vercel | Despliegue del frontend | No configurada |
 | GitHub | Repositorio remoto y CI | Cuenta creada (correo `noreply` configurado en el repositorio local). Repositorio privado `mateo-rave/nexo` creado y configurado como remoto `origin` (rama `main`); CI en GitHub Actions |
@@ -147,7 +147,7 @@ Al terminar, GitHub destruye el servidor y la base de datos con él.
 | Credenciales del proveedor de correo | Secrets de Edge Functions | **No** |
 | Orígenes permitidos para CORS de Edge Functions | Secrets de Edge Functions | Sí |
 
-El prefijo de las variables públicas del frontend (`VITE_`, `NEXT_PUBLIC_`, etc.) depende del framework que genere Stitch; no se fija hasta inspeccionarlo. Las Edge Functions reciben automáticamente algunas variables de Supabase; verificar cuáles en la documentación vigente al implementarlas.
+Las variables públicas del frontend usan el prefijo `VITE_` (ADR-0006): Vite solo envía al navegador las variables con ese prefijo, así que ninguna clave secreta puede llevarlo. Sus nombres se fijan al crear la aplicación y se añaden al glosario de ADR-0005. Las Edge Functions reciben automáticamente algunas variables de Supabase; verificar cuáles en la documentación vigente al implementarlas.
 
 > **Precaución con `npx supabase projects api-keys`:** el 2026-10-24, con la CLI 2.120.0 y **sin `--reveal`**, la salida de este comando incluyó la clave heredada `service_role` completa. Apareció en una salida local, no se mostró ni se guardó y no se publicó intencionalmente en GitHub. No hay indicios de que esté comprometida.
 > - No volver a ejecutar ese comando con la salida completa visible en pantalla ni guardada en registros.

@@ -1,13 +1,13 @@
 # ADR-0001: Supabase como plataforma de backend
 
-- Estado: Aceptada
+- Estado: Aceptada. Las menciones al frontend en Stitch están superadas por [ADR-0006](0006-frontend-propio-con-react.md); la decisión sobre el backend no cambia.
 - Fecha: 2026-10-23 (propuesta y aceptación)
 
-Nota: la decisión de plataforma es firme para el MVP. Al tomarla no existían todavía las cuentas. Actualización del 2026-10-24: ya existen la cuenta de Supabase (con el proyecto de desarrollo `nexo-dev`) y la de GitHub, aunque el remoto de GitHub sigue sin configurarse. Siguen sin verificar el código que generará Stitch y los planes; si esa verificación obliga a cambiar la decisión, se hará con una nueva ADR.
+Nota: la decisión de plataforma es firme para el MVP. Al tomarla no existían todavía las cuentas. Actualización del 2026-10-24: ya existen la cuenta de Supabase (con el proyecto de desarrollo `nexo-dev`) y la de GitHub, con el repositorio privado como remoto `origin`. El frontend ya no se hará en Stitch: lo construye Claude Code en el repositorio (ADR-0006). Siguen sin verificar los planes; si esa verificación obliga a cambiar la decisión, se hará con una nueva ADR.
 - Responsables: propietario del producto
 
 ## Contexto
-La primera versión de `CLAUDE.md` proponía Django, Django REST Framework, Celery/Redis y Docker Compose. Aún no había código ni alojamiento contratado. El propietario desarrollará el frontend en Stitch y prevé publicarlo en Vercel. Se necesita un backend que:
+La primera versión de `CLAUDE.md` proponía Django, Django REST Framework, Celery/Redis y Docker Compose. Aún no había código ni alojamiento contratado. El propietario desarrollaría el frontend en Stitch y preveía publicarlo en Vercel (historia: desde el 2026-10-24 el frontend se construye en el repositorio, ADR-0006). Se necesita un backend que:
 
 - ofrezca autenticación, PostgreSQL y aislamiento multiempresa sin operar servidores propios;
 - permita a una persona o equipo pequeño entregar el MVP en el plazo estimado;
@@ -44,5 +44,5 @@ Durante el MVP **no** se usarán Django, DRF, Celery ni Redis, y no se mantendr�
 ## Cómo se verificará
 - El flujo crítico del MVP funciona de punta a punta en un proyecto Supabase de desarrollo.
 - Las pruebas de aislamiento entre organizaciones pasan (pgTAP y API).
-- El frontend generado por Stitch puede consumir Auth, Data API y Edge Functions sin claves secretas en el cliente.
-- Revisión de esta ADR cuando se inspeccione el código de Stitch y se elija plan/alojamiento. Si la lógica de negocio se vuelve difícil de mantener en SQL/Edge Functions, se reevaluará la opción 1 o 3 en una nueva ADR.
+- El frontend (ADR-0006) puede consumir Auth, Data API y Edge Functions sin claves secretas en el cliente.
+- Revisión de esta ADR cuando se elija plan/alojamiento. Si la lógica de negocio se vuelve difícil de mantener en SQL/Edge Functions, se reevaluará la opción 1 o 3 en una nueva ADR.

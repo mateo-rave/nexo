@@ -27,7 +27,7 @@ Validar si equipos pequeños de servicios pueden usar Nexo para coordinar un pro
 
 Roles y permisos: `propietario`, `administrador` y `miembro`, según `docs/security/permissions.md`.
 
-La arquitectura técnica es provisional: Supabase como backend y Vercel para el frontend de Stitch (ver `docs/architecture/decisions/`).
+La arquitectura técnica es provisional: Supabase como backend y un frontend propio con React en el repositorio, con despliegue previsto en Vercel (ver `docs/architecture/decisions/`, en especial ADR-0006).
 
 ## Posponer
 - Constructor visual complejo.

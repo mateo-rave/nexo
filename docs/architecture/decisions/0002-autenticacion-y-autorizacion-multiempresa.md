@@ -5,7 +5,7 @@
 - Responsables: propietario del producto
 
 ## Contexto
-Un usuario puede pertenecer a una o más organizaciones con roles distintos en cada una. El frontend (Stitch, desplegado en Vercel) accederá a Supabase con la clave publicable, de modo que cualquier usuario autenticado puede enviar peticiones directas a la Data API saltándose la interfaz. El aislamiento debe garantizarse en el servidor y en la base de datos, nunca en React.
+Un usuario puede pertenecer a una o más organizaciones con roles distintos en cada una. El frontend (previsto en Stitch al escribir esta ADR; desde el 2026-10-24, aplicación propia en React según ADR-0006, con despliegue previsto en Vercel) accederá a Supabase con la clave publicable, de modo que cualquier usuario autenticado puede enviar peticiones directas a la Data API saltándose la interfaz. El aislamiento debe garantizarse en el servidor y en la base de datos, nunca en React.
 
 ## Opciones consideradas
 1. **Roles en claims del JWT (Custom Access Token Hook).** Evita consultas en cada política. Los claims quedan desactualizados hasta que se renueva el token (un rol revocado sigue activo minutos u horas) y el token crece con el número de organizaciones.

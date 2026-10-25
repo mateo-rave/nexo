@@ -4,7 +4,7 @@
 - Fecha: 2026-10-23 (propuesta y aceptación provisional)
 - Responsables: propietario del producto
 
-> **En pocas palabras:** el frontend solo muestra y pide cosas; las reglas importantes viven en la base de datos (tablas protegidas, funciones SQL y triggers); las Edge Functions se reservan para lo que necesite secretos o servicios externos, que en el MVP casi no existe. "Provisional" significa que se aplica desde ya, pero se revisará cuando tengamos el código de Stitch y experiencia real con las primeras funciones SQL.
+> **En pocas palabras:** el frontend solo muestra y pide cosas; las reglas importantes viven en la base de datos (tablas protegidas, funciones SQL y triggers); las Edge Functions se reservan para lo que necesite secretos o servicios externos, que en el MVP casi no existe. "Provisional" significa que se aplica desde ya, pero se revisará con la experiencia real de las primeras funciones SQL y del frontend propio (ADR-0006, que sustituye la referencia original al código de Stitch).
 
 ## Contexto
 Con Supabase, la lógica puede vivir en cuatro lugares: el frontend, la Data API (PostgREST sobre tablas con RLS), funciones SQL/triggers y Edge Functions (TypeScript/Deno). Sin un criterio explícito la lógica se dispersa, se duplica o termina en React, donde cualquier usuario puede saltársela.
@@ -41,7 +41,7 @@ Opción 3, con estas reglas:
 ## Consecuencias
 - La lógica de negocio crítica queda en SQL versionado en migraciones, con pruebas pgTAP. Requiere disciplina de revisión de PL/pgSQL.
 - Las Edge Functions quedan pequeñas y enfocadas, más fáciles de probar con `deno test`.
-- El contrato de API para Stitch se compone de: tablas/vistas expuestas, funciones RPC y endpoints de Edge Functions. Debe documentarse en `docs/api/` (pendiente).
+- El contrato de API para el frontend (ADR-0006; originalmente pensado para Stitch) se compone de: tablas/vistas expuestas, funciones RPC y endpoints de Edge Functions. Debe documentarse en `docs/api/` (pendiente).
 
 ## Cómo se verificará
 - Revisión de cada nueva operación contra la tabla anterior antes de implementarla.

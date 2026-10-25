@@ -1,47 +1,44 @@
-# Nexo — archivos iniciales del proyecto
+# Nexo
 
-Este paquete prepara el contexto de producto y las reglas para trabajar con Claude Code. Todavía no contiene el backend implementado.
+Nexo es un SaaS multiempresa en construcción para pequeños negocios de servicios. Su objetivo es centralizar y coordinar solicitudes, proyectos, tareas y responsables; detectar bloqueos; y automatizar tareas repetitivas con reglas explícitas, controladas y auditables.
 
-## Cómo usarlo
+El público inicial (pequeñas agencias digitales y equipos de servicios) es una hipótesis: la validación comercial está pendiente. Visión, requisitos y alcance del MVP en [`docs/product/`](docs/product/).
 
-1. Descomprime el contenido directamente en la raíz de tu carpeta `nexo`.
-2. Abre una terminal dentro de esa carpeta.
-3. Inicializa Git si aún no existe: `git init`.
-4. Comprueba que el archivo `CLAUDE.md` quede en la raíz.
-5. Ejecuta `claude`.
-6. Pega el prompt de primera tarea que aparece al final de este README.
+## Estado actual
 
-No crees un `.env` con credenciales hasta que la configuración del backend lo necesite. `.env.example` es una plantilla y sí puede versionarse.
+- **Backend (Supabase), en construcción:**
+  - **Hecho y probado:** esquema base, autenticación con Supabase Auth, organizaciones y membresías (crear organizaciones; agregar, cambiar de rol, quitar y salir de miembros), con RLS y auditoría. Son las dos migraciones de [`supabase/migrations/`](supabase/migrations/), aplicadas en el proyecto de desarrollo.
+  - **Pendiente:** las funcionalidades de negocio: proyectos, tareas, flujos de trabajo y automatizaciones.
+- **Frontend: decidido, todavía sin implementar.** Será propio, en este repositorio, con Vite, React, TypeScript y Tailwind CSS ([ADR-0006](docs/architecture/decisions/0006-frontend-propio-con-react.md)). El despliegue previsto es Vercel, todavía sin configurar.
+- **Pruebas:** pgTAP para la base de datos y pruebas de integración de la API con Deno y `supabase-js`. Se ejecutan en GitHub Actions contra un Supabase local y desechable.
 
-## Prompt inicial para Claude Code
+El detalle del avance está en el plan de la fase 1: [`docs/plans/`](docs/plans/).
 
-```text
-Lee primero CLAUDE.md y todos los documentos dentro de docs/.
+## Estructura del repositorio
 
-Estamos creando Nexo desde cero. Antes de instalar dependencias o escribir código de aplicación:
-1. Inspecciona el repositorio y el entorno disponible.
-2. Resume qué es Nexo, el público inicial, el problema, el alcance del MVP y lo que todavía es una hipótesis.
-3. Detecta contradicciones o decisiones técnicas no resueltas entre los documentos.
-4. Propón un plan por fases que priorice un flujo completo y funcional en el plazo objetivo de tres meses.
-5. Actualiza los documentos solo cuando haya una razón clara y señala cada modificación.
-6. No construyas frontend; lo desarrollaré por separado en Stitch.
-7. No implementes todos los módulos aún. Presenta el plan y recomienda el siguiente paso pequeño.
+| Ruta | Contenido |
+|---|---|
+| [`CLAUDE.md`](CLAUDE.md) | Reglas permanentes del proyecto: alcance, arquitectura, identidad visual, seguridad, pruebas y convenciones de nombres. |
+| [`docs/`](docs/) | Producto (`product/`), arquitectura y decisiones ADR (`architecture/`), planes por fase (`plans/`), estrategia de pruebas (`qa/`), seguridad y permisos (`security/`) y operaciones (`operations/`). |
+| [`supabase/`](supabase/) | Configuración local de Supabase (`config.toml`), migraciones SQL (`migrations/`) y pruebas pgTAP (`tests/`). |
+| [`pruebas/api/`](pruebas/api/) | Pruebas de integración de la API con Deno y `supabase-js` (`deno.json` y `deno.lock` con versiones fijadas). |
+| [`.github/workflows/`](.github/workflows/) | CI: `pruebas-base-datos.yml` levanta un Supabase local, aplica las migraciones y ejecuta las pruebas pgTAP y de API. |
+| `package.json` | Fija la versión de la CLI de Supabase usada en el proyecto. |
+| `.env.example` | Nombres de variables de entorno con valores de ejemplo, sin secretos reales. |
 
-No afirmes que una funcionalidad está implementada ni que una prueba pasó si no lo verificaste. No subas secretos, no hagas cambios destructivos ni despliegues a producción.
-```
+## Preparar el entorno
 
-## Estructura incluida
+Requisitos y detalles en [`docs/operations/development-and-backups.md`](docs/operations/development-and-backups.md).
 
-- `CLAUDE.md`: reglas permanentes para Claude Code.
-- `.gitignore`: archivos y datos locales que Git no debe rastrear.
-- `.dockerignore`: exclusiones para imágenes Docker. Con la arquitectura Supabase no se prevé construir imágenes propias en el MVP; se conserva por si se necesita más adelante.
-- `.env.example`: nombres de variables de entorno sin secretos reales.
-- `.editorconfig`: formato básico consistente de archivos.
-- `docs/product/`: visión, requisitos y alcance del MVP.
-- `docs/architecture/`: arquitectura provisional (Supabase + Vercel) y decisiones técnicas (ADR-0001 a ADR-0004).
-- `docs/qa/`: estrategia de pruebas.
-- `docs/security/`: modelo inicial de amenazas y matriz de roles y permisos.
-- `docs/operations/`: notas iniciales de despliegue, respaldos y recuperación.
-- `docs/plans/`: planes de cada fase de implementación.
+1. Instalar Node.js (versión 20 o superior, según `package.json`).
+2. Instalar la CLI de Supabase en la versión fijada: `npm ci`. Se usa con `npx supabase <comando>`.
+3. Las pruebas pgTAP y de API se ejecutan en GitHub Actions. Ejecutarlas en local con `npx supabase start` requiere Docker.
+4. Para trabajar con el proyecto remoto de desarrollo, el propietario ejecuta `npx supabase login` y `npx supabase link` en su propia terminal. Las contraseñas y claves no se comparten ni se guardan en Git.
 
-El contenido es una base de trabajo y debe evolucionar conforme se validen los requisitos y se tomen decisiones técnicas.
+No subas archivos `.env` ni claves secretas al repositorio: `.env.example` es solo una plantilla.
+
+## Documentación clave
+
+- Arquitectura: [`docs/architecture/overview.md`](docs/architecture/overview.md) y decisiones en [`docs/architecture/decisions/`](docs/architecture/decisions/) (ADR-0001 a ADR-0006).
+- Pruebas: [`docs/qa/test-strategy.md`](docs/qa/test-strategy.md).
+- Seguridad: [`docs/security/threat-model.md`](docs/security/threat-model.md) y [`docs/security/permissions.md`](docs/security/permissions.md).

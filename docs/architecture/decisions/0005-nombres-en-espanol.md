@@ -18,7 +18,7 @@ El propietario aprende desarrollo de software y quiere leer y entender el códig
 Opción 2.
 
 ### Reglas
-- `snake_case` en minúsculas: palabras separadas por `_`, por ejemplo `agregar_miembro`. En TypeScript, funciones y variables van en `camelCase` y tipos en `PascalCase` (ver "Convenciones de código TypeScript").
+- `snake_case` en minúsculas: palabras separadas por `_`, por ejemplo `agregar_miembro`. En TypeScript, funciones y variables van en `camelCase`, y tipos y componentes de React en `PascalCase` (ver "Convenciones de código TypeScript").
 - Sin tildes ni ñ: `membresias`, `auditoria`, `anadir` → mejor `agregar`.
 - Tablas en plural (`organizaciones`); columnas en singular (`rol`); claves foráneas `<entidad>_id` (`organizacion_id`).
 - Funciones con un verbo en infinitivo (`crear_organizacion`); funciones que responden sí/no empiezan por `es_` o `tiene_`.
@@ -151,7 +151,7 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 
 **Convenciones de código TypeScript** (decisión del 2026-10-24): los nombres siguen en español, pero cada lenguaje conserva su estilo habitual.
 - Funciones, variables y propiedades propias en `camelCase`: `prepararEscenario`, `llamarRpc`, `estadoHttp`, `organizacionA`.
-- Tipos, interfaces y clases en `PascalCase`: `ResultadoRpc`, `RechazoEsperado`, `FotoEstado`.
+- Tipos, interfaces y clases en `PascalCase`: `ResultadoRpc`, `RechazoEsperado`, `FotoEstado`. Los componentes de React también, porque JSX exige que empiecen por mayúscula (ADR-0006).
 - Los objetos SQL siguen en `snake_case`, y desde TypeScript se escriben exactamente igual: nombres de RPC (`agregar_miembro`), argumentos (`p_organizacion_id`), tablas y columnas (`membresias`, `organizacion_id`).
 - Los campos de datos de la API (respuestas, filas y metadatos que se envían) conservan los nombres del contrato: `usuario_id`, `nombre_visible`, `actor_id`, `recurso_id`, `detalles`; también los códigos de error que llegan en `details` (`permiso_denegado`), que se usan como claves del catálogo de rechazos esperados.
 - Los nombres oficiales de los usuarios de prueba (`propietario_a`, `sin_membresia`...) se mantienen como en este glosario, también como claves en TypeScript.

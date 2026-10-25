@@ -90,7 +90,7 @@ Producción nunca se usa para pruebas ni para ejecutar `db reset`.
 | Edge Functions (lógica pura) | `deno test` sobre módulos sin dependencias de red. | Deno instalado (no requiere Docker). |
 | Edge Functions (integración) | `supabase functions serve` + `deno test`, o despliegue a desarrollo. | Docker local, CI o proyecto de desarrollo. |
 | Integración de API | Pruebas TypeScript con `supabase-js` y usuarios de prueba: Data API, RPC y Edge Functions, incluidos accesos cruzados. | Supabase local, CI o desarrollo. |
-| Flujo completo | Playwright cuando el frontend de Stitch esté integrado. | Frontend en el repositorio. |
+| Flujo completo | Playwright cuando exista el frontend propio (ADR-0006). | Frontend en el repositorio. |
 | Lint y formato | `deno fmt`, `deno lint`; `supabase db lint` para PL/pgSQL; Security/Performance Advisors. | Deno / CLI; Advisors desde el dashboard. |
 
 Las versiones exactas de Supabase CLI, Deno y librerías se fijarán al instalarlas, verificando su compatibilidad. La de Supabase CLI queda en `package.json`.

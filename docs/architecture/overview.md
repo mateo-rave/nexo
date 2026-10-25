@@ -1,12 +1,14 @@
 # Arquitectura propuesta de Nexo
 
-Estado: **provisional**. Escenario objetivo: frontend desarrollado en Stitch y desplegado en Vercel; backend sobre Supabase. No hay alojamiento contratado ni configurado. Se revisará al inspeccionar el código que genere Stitch y al elegir planes y despliegue.
+Estado: **provisional**. Escenario objetivo: frontend propio en el repositorio (Vite, React, TypeScript y Tailwind CSS, ADR-0006) con despliegue previsto en Vercel; backend sobre Supabase. No hay alojamiento de frontend contratado ni configurado. Se revisará al elegir planes y despliegue.
 
 Decisiones relacionadas:
 - [ADR-0001](decisions/0001-supabase-como-plataforma-backend.md): Supabase como plataforma de backend.
 - [ADR-0002](decisions/0002-autenticacion-y-autorizacion-multiempresa.md): autenticación y autorización multiempresa.
 - [ADR-0003](decisions/0003-separacion-api-datos-sql-edge-functions.md): separación entre Data API, SQL y Edge Functions.
 - [ADR-0004](decisions/0004-entornos-migraciones-y-pruebas.md): entornos, migraciones y pruebas.
+- [ADR-0005](decisions/0005-nombres-en-espanol.md): nombres del código en español.
+- [ADR-0006](decisions/0006-frontend-propio-con-react.md): frontend propio con React en el repositorio (sustituye a Stitch).
 
 > Historial: la versión anterior de este documento proponía un monolito modular con Django/DRF y Celery/Redis. Se sustituyó por la ADR-0001. Los principios de modularidad, límites claros y autorización en servidor se mantienen.
 
@@ -14,7 +16,7 @@ Decisiones relacionadas:
 Un único backend administrado (Supabase) con el esquema, las políticas y las funciones versionados en migraciones SQL, más un conjunto pequeño de Edge Functions. Sin microservicios. Sin una segunda API ni un segundo sistema de autenticación.
 
 ```text
- Navegador (frontend Stitch, Vercel)
+ Navegador (frontend React, Vercel)
    │  clave publicable + JWT del usuario
    ├──► Supabase Auth ............ identidad, sesiones, JWT
    ├──► Data API (PostgREST) ..... CRUD simple ──┐
@@ -32,7 +34,7 @@ Un único backend administrado (Supabase) con el esquema, las políticas y las f
 
 | Componente | Responsable de | Nunca |
 |---|---|---|
-| Frontend (Stitch → Vercel) | Presentación; validación de formularios como ayuda de UX; recordar la organización mostrada; llamar a Auth, Data API, RPC y Edge Functions con el JWT del usuario. | Decidir permisos, aplicar reglas de negocio, contener claves secretas. Su framework (Vite, Next.js u otro) no se asume hasta inspeccionar el código. |
+| Frontend (React en el repositorio → Vercel) | Presentación; validación de formularios como ayuda de UX; recordar la organización mostrada; llamar a Auth, Data API, RPC y Edge Functions con el JWT del usuario. | Decidir permisos, aplicar reglas de negocio, contener claves secretas. Sustituir RLS o los controles de autorización del backend. Stack decidido: Vite, React, TypeScript y Tailwind CSS (ADR-0006); implementación todavía pendiente. |
 | Supabase Auth | Registro, inicio de sesión, confirmación de correo, recuperación de contraseña, emisión y renovación de JWT. Redirecciones permitidas por entorno. | Guardar roles por organización (eso vive en `membresias`). |
 | Data API (PostgREST) | Lecturas, listados paginados y filtrados, CRUD de una tabla protegido por RLS. | Operaciones de varias tablas o transiciones de estado. |
 | Funciones SQL (RPC) | Crear organización + membresía propietario; gestionar miembros y roles; transiciones de estado de tareas; publicar versiones de flujos; evaluar reglas y aplicar acciones internas; detección de bloqueos. | Llamadas HTTP o uso de secretos de terceros. |
@@ -91,7 +93,7 @@ Detalle en ADR-0002. Roles (`propietario`, `administrador`, `miembro`) y matriz 
 - **Resultado:** una ejecución solo es `exitosa` si todas sus acciones obligatorias se completaron en la misma transacción o fueron confirmadas por la Edge Function correspondiente.
 
 ## API para el frontend
-El contrato consumible por Stitch se compone de:
+El contrato consumible por el frontend se compone de:
 1. Tablas y vistas expuestas por la Data API.
 2. Funciones RPC.
 3. Endpoints de Edge Functions.
@@ -116,7 +118,7 @@ CORS:
 Local (Supabase CLI + Docker), desarrollo remoto, pruebas/CI y producción, con proyectos Supabase separados. Detalle en ADR-0004 y en `docs/operations/development-and-backups.md`.
 
 ## Decisiones pendientes
-- Framework real del frontend generado por Stitch y su forma de gestionar la sesión (cliente puro o renderizado en servidor).
+- Framework del frontend y gestión de la sesión: **resuelto** por ADR-0006 (SPA con Vite y React; sesión en el cliente con `supabase-js`). Queda pendiente decidir la política de seguridad de contenido (CSP).
 - Planes de Supabase y Vercel; disponibilidad de backups, PITR y Branching según plan.
 - Invitación de miembros: flujo y caducidad. La matriz de roles ya está definida en `docs/security/permissions.md`.
 - Validación de esquemas `jsonb` de reglas y flujos: función propia vs `pg_jsonschema`.
