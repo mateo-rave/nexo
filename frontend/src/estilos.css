@@ -1,0 +1,169 @@
+@import "@fontsource-variable/geist";
+@import "tailwindcss";
+
+/* El modo oscuro se activa con data-tema="oscuro" en <html> (ver index.html y src/tema/tema.ts). */
+@custom-variant dark (&:where([data-tema="oscuro"], [data-tema="oscuro"] *));
+
+/* -----------------------------------------------------------------------------
+   Tokens de color de Nexo (identidad aprobada en CLAUDE.md, sección 4).
+   No cambiar estos valores sin aprobación expresa del propietario.
+   ----------------------------------------------------------------------------- */
+
+:root,
+[data-tema="claro"] {
+    color-scheme: light;
+    --fondo: #f4f8f7;
+    --superficie: #ffffff;
+    --superficie-elevada: #eaf2f1;
+    --acento: #08776f;
+    --texto: #15292c;
+    --texto-secundario: #536a6d;
+    --exito: #177a50;
+    --atencion: #8c5c00;
+    --error: #b42318;
+    --informacion: #235ca8;
+    /* Texto sobre el acento: la superficie del propio tema. */
+    --sobre-acento: #ffffff;
+}
+
+[data-tema="oscuro"] {
+    color-scheme: dark;
+    --fondo: #0b1117;
+    --superficie: #111c24;
+    --superficie-elevada: #17262f;
+    --acento: #35d6c3;
+    --texto: #f2f7f7;
+    --texto-secundario: #a5b8bd;
+    --exito: #5cde9b;
+    --atencion: #f4c66a;
+    --error: #ff8585;
+    --informacion: #7eb6ff;
+    --sobre-acento: #0b1117;
+}
+
+/* Tokens funcionales derivados de la paleta (bordes y fondos suaves), sin colores nuevos. */
+:root {
+    --borde: color-mix(in oklab, var(--texto) 11%, transparent);
+    --borde-fuerte: color-mix(in oklab, var(--texto) 20%, transparent);
+    --acento-suave: color-mix(in oklab, var(--acento) 13%, transparent);
+    /* 10 % y no 13 %: con 13 % el verde de éxito sobre su fondo suave bajaba de 4,5:1 en modo claro. */
+    --exito-suave: color-mix(in oklab, var(--exito) 10%, transparent);
+    /* 11 % y no 14 %: con 14 % el texto de atención sobre este fondo bajaba de 4,5:1 en modo claro sobre --fondo. */
+    --atencion-suave: color-mix(in oklab, var(--atencion) 11%, transparent);
+    --error-suave: color-mix(in oklab, var(--error) 13%, transparent);
+    --informacion-suave: color-mix(in oklab, var(--informacion) 13%, transparent);
+}
+
+@theme inline {
+    --color-fondo: var(--fondo);
+    --color-superficie: var(--superficie);
+    --color-elevada: var(--superficie-elevada);
+    --color-acento: var(--acento);
+    --color-acento-suave: var(--acento-suave);
+    --color-sobre-acento: var(--sobre-acento);
+    --color-texto: var(--texto);
+    --color-texto-2: var(--texto-secundario);
+    --color-borde: var(--borde);
+    --color-borde-fuerte: var(--borde-fuerte);
+    --color-exito: var(--exito);
+    --color-exito-suave: var(--exito-suave);
+    --color-atencion: var(--atencion);
+    --color-atencion-suave: var(--atencion-suave);
+    --color-error: var(--error);
+    --color-error-suave: var(--error-suave);
+    --color-informacion: var(--informacion);
+    --color-informacion-suave: var(--informacion-suave);
+}
+
+@theme {
+    /* Geist como primera opción; alternativa de sistema si no carga. */
+    --font-sans:
+        "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+    --ease-nexo: cubic-bezier(0.2, 0, 0, 1);
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-rendering: optimizeLegibility;
+    }
+
+    body {
+        background-color: var(--fondo);
+        color: var(--texto);
+        font-family: var(--font-sans);
+        font-feature-settings: "ss01", "cv11";
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+        background-color: var(--acento-suave);
+    }
+
+    /* Foco de teclado visible en todo elemento interactivo. */
+    :focus-visible {
+        outline: 2px solid var(--acento);
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+}
+
+/* Transiciones discretas (160–220 ms). */
+@utility transicion {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 180ms;
+    transition-timing-function: var(--ease-nexo);
+}
+
+/* Trazo animado de las conexiones del diagrama de flujo. */
+@keyframes recorrer {
+    to {
+        stroke-dashoffset: -20;
+    }
+}
+
+@utility linea-activa {
+    stroke-dasharray: 6 4;
+    animation: recorrer 1.4s linear infinite;
+}
+
+/* Entrada escalonada de las secciones del panel (solo en el primer montaje).
+   El retraso de cada sección se da con la variable --retraso. */
+@keyframes entrar {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+}
+
+@utility entrada {
+    animation: entrar 200ms var(--ease-nexo) both;
+    animation-delay: var(--retraso, 0ms);
+}
+
+/* Aparición breve de elementos que se muestran al filtrar o al abrir una pista. */
+@keyframes aparecer {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+
+@utility aparecer {
+    animation: aparecer 180ms var(--ease-nexo) both;
+}
+
+/* Respeta prefers-reduced-motion: sin animaciones ni transiciones. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
