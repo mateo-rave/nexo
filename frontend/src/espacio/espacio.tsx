@@ -1,5 +1,15 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, Bell, Building2, FolderKanban, LayoutDashboard, LogOut, Plus, type LucideIcon } from "lucide-react";
+import {
+    ArrowLeft,
+    Bell,
+    Building2,
+    FolderKanban,
+    LayoutDashboard,
+    LogOut,
+    Plus,
+    Workflow,
+    type LucideIcon,
+} from "lucide-react";
 import { useCallback, useState, type FormEvent } from "react";
 import { MarcaNexo } from "../componentes/simbolo_nexo.tsx";
 import { SelectorTema } from "../componentes/selector_tema.tsx";
@@ -8,6 +18,7 @@ import { useSesion } from "../sesion/sesion.ts";
 import { configuracion } from "../supabase/cliente.ts";
 import type { PreferenciaTema } from "../tema/tema.ts";
 import { Acceso } from "./acceso.tsx";
+import { Automatizaciones } from "./automatizaciones.tsx";
 import { useCarga } from "./carga.ts";
 import { crearOrganizacion, listarOrganizaciones, listarProyectos, type Organizacion } from "./datos.ts";
 import { Notificaciones } from "./notificaciones.tsx";
@@ -78,7 +89,7 @@ function guardarOrganizacion(id: string): void {
     }
 }
 
-type Seccion = "panel" | "proyectos" | "notificaciones";
+type Seccion = "panel" | "proyectos" | "automatizaciones" | "notificaciones";
 
 // Proyecto abierto en la sección Proyectos y, si se llega desde el panel, la
 // tarea que se resalta.
@@ -211,7 +222,7 @@ function EspacioConSesion({
                     </button>
                 </div>
 
-                <nav aria-label="Secciones" className="mt-3 flex gap-1 lg:mt-5 lg:flex-col">
+                <nav aria-label="Secciones" className="mt-3 flex gap-1 overflow-x-auto lg:mt-5 lg:flex-col lg:overflow-visible">
                     <EnlaceSeccion
                         etiqueta="Panel"
                         Icono={LayoutDashboard}
@@ -223,6 +234,12 @@ function EspacioConSesion({
                         Icono={FolderKanban}
                         activa={seccion === "proyectos"}
                         alPulsar={() => irA("proyectos")}
+                    />
+                    <EnlaceSeccion
+                        etiqueta="Reglas"
+                        Icono={Workflow}
+                        activa={seccion === "automatizaciones"}
+                        alPulsar={() => irA("automatizaciones")}
                     />
                     <EnlaceSeccion
                         etiqueta="Notificaciones"
@@ -288,6 +305,9 @@ function EspacioConSesion({
                             alAbrir={setAbierto}
                         />
                     )}
+                    {seccion === "automatizaciones" && (
+                        <Automatizaciones key={organizacion.id} cliente={cliente} organizacion={organizacion} />
+                    )}
                     {seccion === "notificaciones" && (
                         <Notificaciones key={organizacion.id} cliente={cliente} organizacion={organizacion} />
                     )}
@@ -313,7 +333,7 @@ function EnlaceSeccion({
             type="button"
             onClick={alPulsar}
             aria-current={activa ? "page" : undefined}
-            className={`transicion flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm ${
+            className={`transicion flex shrink-0 items-center gap-3 rounded-lg px-2.5 py-2 text-sm ${
                 activa ? "bg-acento-suave font-medium text-texto" : "text-texto-2 hover:bg-elevada hover:text-texto"
             }`}
         >

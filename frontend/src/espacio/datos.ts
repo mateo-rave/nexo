@@ -313,3 +313,167 @@ export async function listarNotificaciones(
 export async function marcarNotificacionLeida(cliente: SupabaseClient, notificacionId: string): Promise<void> {
     exigir(await cliente.rpc("marcar_notificacion_leida", { p_notificacion_id: notificacionId }));
 }
+
+// -----------------------------------------------------------------------------
+// Reglas de automatización (ADR-0008). El catálogo es cerrado: estos tipos
+// reproducen exactamente lo que valida privado.validar_definicion_regla; el
+// backend vuelve a comprobarlo todo al guardar.
+// -----------------------------------------------------------------------------
+
+export type Activador = "tarea_estado_cambiado" | "tarea_vencida";
+
+export type Destinatarios = "responsable" | "propietarios_y_administradores";
+
+export type Condicion =
+    | { tipo: "estado_destino"; estados: EstadoTarea[] }
+    | { tipo: "proyecto"; proyecto_id: string }
+    | { tipo: "con_responsable"; valor: boolean };
+
+export type AccionRegla = { tipo: "notificar"; destinatarios: Destinatarios };
+
+export type DefinicionRegla = { activador: Activador; condiciones: Condicion[]; acciones: AccionRegla[] };
+
+export type VersionRegla = DefinicionRegla & {
+    id: string;
+    regla_id: string;
+    numero: number;
+    estado: "borrador" | "publicada";
+    publicada_en: string | null;
+};
+
+export type PeriodoActivacion = {
+    id: string;
+    regla_id: string;
+    activada_en: string;
+    desactivada_en: string | null;
+};
+
+export type Regla = {
+    id: string;
+    nombre: string;
+    creado_en: string;
+    versiones: VersionRegla[];
+    periodos: PeriodoActivacion[];
+};
+
+export type EstadoEjecucion = "pendiente" | "exitosa" | "fallida" | "omitida";
+
+export type AccionEjecucion = {
+    orden: number;
+    estado: "programada" | "completada" | "fallida";
+    resultado: {
+        notificados?: string[];
+        omitidos?: { destinatario_id: string; motivo: string }[];
+    };
+};
+
+export type Ejecucion = {
+    id: string;
+    version_regla_id: string;
+    estado: EstadoEjecucion;
+    intentos: number;
+    max_intentos: number;
+    proximo_intento_en: string;
+    iniciada_en: string | null;
+    terminada_en: string | null;
+    codigo_error: string | null;
+    mensaje_error: string | null;
+    creado_en: string;
+    acciones: AccionEjecucion[];
+};
+
+// Reglas con sus versiones y sus periodos de activación (tres lecturas con
+// RLS, unidas aquí).
+export async function listarReglas(cliente: SupabaseClient, organizacionId: string): Promise<Regla[]> {
+    const [reglas, versiones, periodos] = await Promise.all([
+        cliente
+            .from("reglas_automatizacion")
+            .select("id, nombre, creado_en")
+            .eq("organizacion_id", organizacionId)
+            .order("creado_en"),
+        cliente
+            .from("versiones_regla")
+            .select("id, regla_id, numero, estado, activador, condiciones, acciones, publicada_en")
+            .eq("organizacion_id", organizacionId)
+            .order("numero"),
+        cliente
+            .from("periodos_activacion_regla")
+            .select("id, regla_id, activada_en, desactivada_en")
+            .eq("organizacion_id", organizacionId)
+            .order("activada_en"),
+    ]);
+    const filasVersiones = exigir(versiones) as VersionRegla[];
+    const filasPeriodos = exigir(periodos) as PeriodoActivacion[];
+    return (exigir(reglas) as Omit<Regla, "versiones" | "periodos">[]).map((regla) => ({
+        ...regla,
+        versiones: filasVersiones.filter((version) => version.regla_id === regla.id),
+        periodos: filasPeriodos.filter((periodo) => periodo.regla_id === regla.id),
+    }));
+}
+
+export async function crearRegla(
+    cliente: SupabaseClient,
+    organizacionId: string,
+    nombre: string,
+    definicion: DefinicionRegla,
+): Promise<VersionRegla> {
+    return exigir(
+        await cliente.rpc("crear_regla", {
+            p_organizacion_id: organizacionId,
+            p_nombre: nombre,
+            p_activador: definicion.activador,
+            p_condiciones: definicion.condiciones,
+            p_acciones: definicion.acciones,
+        }),
+    ) as VersionRegla;
+}
+
+export async function guardarBorradorRegla(
+    cliente: SupabaseClient,
+    versionReglaId: string,
+    definicion: DefinicionRegla,
+): Promise<void> {
+    exigir(
+        await cliente.rpc("guardar_borrador_regla", {
+            p_version_regla_id: versionReglaId,
+            p_activador: definicion.activador,
+            p_condiciones: definicion.condiciones,
+            p_acciones: definicion.acciones,
+        }),
+    );
+}
+
+export async function crearVersionBorradorRegla(cliente: SupabaseClient, versionReglaId: string): Promise<void> {
+    exigir(await cliente.rpc("crear_version_borrador_regla", { p_version_regla_id: versionReglaId }));
+}
+
+export async function publicarVersionRegla(cliente: SupabaseClient, versionReglaId: string): Promise<void> {
+    exigir(await cliente.rpc("publicar_version_regla", { p_version_regla_id: versionReglaId }));
+}
+
+export async function activarRegla(cliente: SupabaseClient, reglaId: string): Promise<void> {
+    exigir(await cliente.rpc("activar_regla", { p_regla_id: reglaId }));
+}
+
+export async function pausarRegla(cliente: SupabaseClient, reglaId: string): Promise<void> {
+    exigir(await cliente.rpc("pausar_regla", { p_regla_id: reglaId }));
+}
+
+// Últimas ejecuciones de una regla, con sus acciones (embebidas por la clave
+// foránea compuesta de acciones_automatizacion).
+export async function listarEjecuciones(cliente: SupabaseClient, reglaId: string): Promise<Ejecucion[]> {
+    const filas = exigir(
+        await cliente
+            .from("ejecuciones_automatizacion")
+            .select(
+                "id, version_regla_id, estado, intentos, max_intentos, proximo_intento_en, iniciada_en, terminada_en, codigo_error, mensaje_error, creado_en, acciones_automatizacion(orden, estado, resultado)",
+            )
+            .eq("regla_id", reglaId)
+            .order("creado_en", { ascending: false })
+            .limit(50),
+    ) as unknown as (Omit<Ejecucion, "acciones"> & { acciones_automatizacion: AccionEjecucion[] })[];
+    return filas.map(({ acciones_automatizacion, ...ejecucion }) => ({
+        ...ejecucion,
+        acciones: [...acciones_automatizacion].sort((a, b) => a.orden - b.orden),
+    }));
+}

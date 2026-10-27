@@ -213,6 +213,15 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Códigos de resultado de una ejecución | `condiciones_no_cumplidas`, `tarea_no_disponible`, `hallazgo_resuelto`, `profundidad_maxima`, `ciclo_detectado` (omitida); `fallo_transitorio` (pendiente de reintento); `reintentos_agotados` y `error_interno` (fallida); `error_registro` (pendiente de reintento o fallida, si falló el registro del resultado); `reparto_fallido` (evento descartado tras 3 fallos de reparto) |
 | Archivos de prueba | `supabase/tests/reglas_automatizacion.test.sql`, `supabase/tests/ejecucion_automatizaciones.test.sql` y `pruebas/api/reglas_automatizacion.test.ts` |
 
+### Añadidos con la pantalla de reglas (ADR-0008, fase 5, bloque 5.3, 2026-10-27)
+| Elemento | Nombre oficial |
+|---|---|
+| Archivos | `espacio/automatizaciones.tsx` (sección «Reglas» del espacio) y `e2e/reglas.spec.ts` |
+| Sección del espacio | `automatizaciones` (valor de `Seccion`) |
+| Componentes | `Automatizaciones`, `NuevaRegla`, `DetalleRegla`, `EditorRegla`, `Grupo`, `Opcion`, `EtiquetaEstadoRegla`, `EjecucionesRegla` y `FilaEjecucion`; tipos `Vista`, `EstadoRegla` (`activa`, `pausada`, `sin_activar`), `Operacion` (`guardando`, `publicando`, `activando`, `pausando`, `creando_borrador`), `FiltroResponsable` (`cualquiera`, `con`, `sin`) y `Boton` |
+| Acceso a datos (`espacio/datos.ts`) | Funciones `listarReglas`, `crearRegla`, `guardarBorradorRegla`, `crearVersionBorradorRegla`, `publicarVersionRegla`, `activarRegla`, `pausarRegla` y `listarEjecuciones`; tipos `Activador`, `Destinatarios`, `Condicion`, `AccionRegla`, `DefinicionRegla`, `VersionRegla`, `PeriodoActivacion`, `Regla`, `EstadoEjecucion`, `AccionEjecucion` y `Ejecucion` |
+| Funciones auxiliares | `versionPublicada`, `versionBorrador`, `estadoDeRegla`, `resumenDefinicion` y `listaConO` |
+
 ### Añadidos con los flujos versionados (ADR-0007, fase 2, 2026-10-25)
 | Elemento | Nombre oficial |
 |---|---|
