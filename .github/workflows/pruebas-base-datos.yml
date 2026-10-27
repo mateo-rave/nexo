@@ -13,7 +13,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Solo lectura del repositorio: el job no publica nada.
+# Solo lectura del repositorio: el job no publica nada en él. Las capturas de
+# la E2E se suben como artefacto de la ejecución, que no necesita más permisos.
 permissions:
   contents: read
 
@@ -195,3 +196,15 @@ jobs:
           cd frontend
           VITE_SUPABASE_URL="$url" VITE_SUPABASE_PUBLISHABLE_KEY="$clave" npm run build
           npm run e2e
+
+      # Capturas de la sección Reglas (e2e/reglas.spec.ts) para la revisión
+      # visual. Solo muestran datos sintéticos de este Supabase desechable. Se
+      # suben también si la E2E falla, con las que se hayan llegado a hacer.
+      - name: Guardar las capturas de la sección Reglas
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: capturas-reglas
+          path: frontend/test-results/capturas-reglas/
+          if-no-files-found: warn
+          retention-days: 14
