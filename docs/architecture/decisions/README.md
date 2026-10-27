@@ -16,5 +16,6 @@ Una decisión debe incluir contexto, opciones consideradas, decisión tomada, co
 | [0005](0005-nombres-en-espanol.md) | Nombres del código en español (incluye el glosario oficial) | Aceptada |
 | [0006](0006-frontend-propio-con-react.md) | Frontend propio con React en el repositorio | Aceptada |
 | [0007](0007-modelo-proyectos-tareas-estados-flujos.md) | Modelo de proyectos, tareas, estados y flujos | Aceptada |
+| [0008](0008-motor-minimo-reglas-automatizacion.md) | Motor mínimo de reglas de automatización | Aceptada |
 
 La ADR-0001 sustituye la preferencia inicial por Django/DRF/Celery/Redis que figuraba en `CLAUDE.md` (no existía una ADR previa).
