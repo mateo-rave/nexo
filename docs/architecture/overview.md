@@ -79,19 +79,20 @@ Esquemas de PostgreSQL:
 
 Detalle en ADR-0002. Roles (`propietario`, `administrador`, `miembro`) y matriz de permisos en [docs/security/permissions.md](../security/permissions.md).
 
-## Motor de automatización (diseño propuesto)
-- **Definiciones:** `definiciones_flujo` y `versiones_flujo` (`borrador` → `publicada`). Una versión publicada es inmutable (trigger). Reglas en `reglas_automatizacion` con versión, activador, condiciones y acciones en `jsonb` validado contra un catálogo cerrado de tipos permitidos. La validación de esquema (función de validación propia o extensión `pg_jsonschema`) queda pendiente.
-- **Activadores del MVP:** cambio de estado de tarea, tarea creada y comprobación programada.
-- **Condiciones del MVP:** comparaciones sobre campos conocidos (estado, fecha límite, responsable asignado, tiempo sin actividad).
-- **Acciones del MVP:** crear notificación interna, crear hallazgo, crear tarea de seguimiento, cambiar estado. Todas internas.
-- **Ejecuciones:** `ejecuciones_automatizacion` con `estado` (`pendiente`, `en_ejecucion`, `exitosa`, `fallida`, `omitida`), `regla_id`, `version_regla`, `evento_id`, `clave_idempotencia` único, `intentos`, `max_intentos`, timestamps, `codigo_error` y mensaje seguro.
+## Motor de automatización
+Decidido en la [ADR-0008](decisions/0008-motor-minimo-reglas-automatizacion.md) y escrito en las migraciones `20261027120000_reglas_automatizacion.sql` y `20261027130000_ejecucion_automatizaciones.sql`, pendientes de validar en CI. La ADR-0008 sustituye el diseño propuesto que figuraba aquí; las diferencias principales se indican.
+- **Definiciones:** `reglas_automatizacion` y `versiones_regla` separadas (`borrador` → `publicada`, como los flujos), con activador, condiciones y acciones en `jsonb` validados al guardar por una función propia en SQL contra un catálogo cerrado, con códigos de error propios (no se usa `pg_jsonschema`). Una versión publicada es inmutable (trigger).
+- **Catálogo del MVP:** activadores `tarea_estado_cambiado` y `tarea_vencida`; condiciones `estado_destino`, `proyecto` y `con_responsable`; acción `notificar`. `tarea_creada`, «tiempo sin actividad», `crear_tarea_seguimiento`, `cambiar_estado` y `crear_hallazgo` quedan fuera por ahora.
+- **Activación:** `periodos_activacion_regla` guarda cada periodo en que la regla estuvo activa. Qué reglas actúan sobre un evento y con qué versión se decide por el momento del evento (`ocurrido_en`), no por la hora de procesamiento.
+- **Eventos:** cola persistente `eventos_automatizacion`, escrita en la misma transacción que el cambio: un trigger sobre el cambio de estado de una tarea y el detector de vencimientos (un evento por hallazgo nuevo). No se expone a los usuarios.
+- **Ejecuciones:** `ejecuciones_automatizacion` con `estado` (`pendiente`, `exitosa`, `fallida`, `omitida`; `en_ejecucion` se añadirá con las acciones externas), `regla_id`, `version_regla_id`, `evento_id`, `intentos`, `max_intentos`, marcas de tiempo, `codigo_error` y mensaje seguro.
 - **Acciones:** `acciones_automatizacion` con estado propio (`programada`, `completada`, `fallida`), para distinguir acción programada de acción completada.
-- **Idempotencia:** restricción `unique` sobre la clave de idempotencia de cada ejecución y sobre la clave de deduplicación de hallazgos y notificaciones; inserciones con `on conflict do nothing`.
-- **Concurrencia:** las ejecuciones pendientes se toman con `for update skip locked`.
-- **Reintentos:** solo para fallos transitorios, con límite de intentos y espera creciente.
-- **Timeouts:** `statement_timeout` en funciones SQL; timeout explícito en llamadas externas de Edge Functions.
-- **Ciclos:** las acciones generadas por automatización llevan `ejecucion_origen_id` y profundidad; se rechaza superar una profundidad máxima y que una regla se dispare por un evento que ella misma causó.
-- **Resultado:** una ejecución solo es `exitosa` si todas sus acciones obligatorias se completaron en la misma transacción o fueron confirmadas por la Edge Function correspondiente.
+- **Idempotencia:** `unique (regla_id, evento_id)` en las ejecuciones (por regla y evento, no por versión), clave única de cada evento y, en las notificaciones, una por hallazgo y destinatario y una por evento y destinatario; inserciones con `on conflict do nothing`.
+- **Concurrencia:** los eventos y las ejecuciones pendientes se toman con `for update skip locked`.
+- **Reintentos:** solo para fallos transitorios; 3 intentos en total, incluido el primero, con esperas de 1 y 5 minutos.
+- **Timeouts:** un `lock_timeout` por transacción, cuyo vencimiento cuenta como fallo transitorio, y lotes limitados. No se fija `statement_timeout` dentro de la función (no limitaría la sentencia en curso). Timeout explícito en las llamadas externas de Edge Functions cuando existan.
+- **Ciclos:** los eventos causados por una acción llevan `ejecucion_origen_id` y profundidad; se omite la ejecución si se supera la profundidad máxima (3) o si la regla ya está en su cadena de origen.
+- **Resultado:** una ejecución solo es `exitosa` si todas sus acciones se completaron en la misma transacción; si algo falla no persisten efectos parciales.
 
 ## API para el frontend
 El contrato consumible por el frontend se compone de:

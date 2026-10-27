@@ -319,6 +319,31 @@ Todas llevan `organizacion_id` con FK compuestas y triggers que impiden cambiarl
   - actualizar `overview.md` (modelo de versiones y estados) y `test-strategy.md` (límite de registros y pruebas del motor);
   - `permissions.md` no cambia.
 
+## Notas de implementación (2026-10-27)
+Detalles que la decisión no fijaba y que se resolvieron al escribir las migraciones `20261027120000_reglas_automatizacion.sql` y `20261027130000_ejecucion_automatizaciones.sql`. No cambian ninguna decisión aceptada.
+1. **Marcas de tiempo.** `publicada_en`, `activada_en`, `desactivada_en` y `ocurrido_en` (en los cambios de estado) usan `clock_timestamp()`, el instante real de la escritura, y no `now()`, que es el inicio de la transacción.
+   - Así el orden entre publicar, activar, pausar y los eventos es el real, también dentro de una misma transacción.
+   - La semántica temporal del apartado 7 se puede probar en pgTAP.
+   - Los eventos del detector usan su `p_ahora`, que es el `detectado_en` del hallazgo, como dice el apartado 7.
+2. **Margen del reparto.** Solo se reparten los eventos con al menos 10 segundos de antigüedad.
+   - Sin el margen, una activación o publicación que empezó antes del evento pero aún no está confirmada podría quedar fuera, y el resultado dependería de la hora de procesamiento.
+   - Añade como mucho un ciclo del job a la latencia.
+3. **Tiempo límite.** No se fija `statement_timeout` dentro de la función, porque un `SET` en una función no limita la sentencia que ya está en curso.
+   - Acotan el tiempo el lote limitado (100 eventos y 100 ejecuciones por pasada) y un `lock_timeout` de 5 segundos.
+   - El bloqueo de la organización se toma dentro del subbloque de cada ejecución, así que una espera agotada cuenta como fallo transitorio.
+4. **Hallazgo del evento.** La FK del evento hacia su hallazgo usa `on delete set null (hallazgo_id)`.
+   - La regla «lleno si y solo si es `tarea_vencida`» se divide en dos partes:
+     - un `check` que impide que otros tipos tengan hallazgo;
+     - un trigger que exige el hallazgo al crear un evento `tarea_vencida`.
+   - Un `check` estricto en los dos sentidos rompería el borrado de una tarea, que primero vacía el hallazgo del evento y después la tarea.
+5. **Nombre de la columna de versión.** En las ejecuciones se llama `version_regla_id`, siguiendo `version_flujo_id`, y no `version_regla`.
+
+Otras precisiones:
+- **Destinatarios.** Se calculan entre los miembros actuales, con la organización bloqueada `for share`. Por eso el motivo `ya_no_es_miembro` del apartado 5 no llega a producirse: solo se usa `ya_notificado`.
+- **Qué datos usa cada paso.** Las condiciones se evalúan sobre la instantánea del evento (`datos`), lo que mantiene el resultado determinista. El destinatario `responsable` es el responsable actual de la tarea.
+- **Validación más estricta.** Cada tipo de condición puede aparecer una sola vez, y una acción no admite claves de más (sin texto libre). Los textos de las notificaciones los genera el servidor.
+- **Concurrencia.** Que dos procesadores no tomen la misma ejecución se apoya en `for update skip locked` y en que pg_cron no solapa ejecuciones del mismo job. pgTAP se ejecuta en una sola sesión y no puede probar dos procesadores simultáneos.
+
 ## Cómo se verificará
 Con pruebas en CI contra el Supabase local y desechable, según los criterios de [`docs/plans/fase-5-reglas-automatizacion.md`](../../plans/fase-5-reglas-automatizacion.md):
 - **pgTAP:** validación, inmutabilidad, RLS, idempotencia, reintentos, ciclos, concurrencia e integración con el detector;

@@ -205,7 +205,11 @@ anonymous_users = 30
 # Number of sessions that can be refreshed in a 5 minute interval per IP address.
 token_refresh = 150
 # Number of sign up and sign-in requests that can be made in a 5 minute interval per IP address (excludes anonymous users).
-sign_in_sign_ups = 30
+# Nexo (ADR-0008, decisión A6): subido de 30 a 100 solo para el Supabase local y
+# de CI, porque las pruebas de API y E2E registran un conjunto de usuarios por
+# módulo y ya usaban 28 de 30. No aplicar este archivo a un proyecto remoto
+# (supabase config push) sin revisarlo: allí el límite se gestiona aparte.
+sign_in_sign_ups = 100
 # Number of OTP / Magic link verifications that can be made in a 5 minute interval per IP address.
 token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
