@@ -36,6 +36,11 @@ test("recorrido: cuenta, organización, proyecto y tarea", async ({ page }) => {
     await page.getByRole("button", { name: "Crear organización" }).click();
     await expect(page.getByRole("heading", { level: 1, name: organizacion })).toBeVisible();
 
+    // El espacio abre en el panel; los proyectos tienen su propia sección
+    const secciones = page.getByRole("navigation", { name: "Secciones" });
+    await expect(page.getByRole("heading", { name: "Necesita atención" })).toBeVisible();
+    await secciones.getByRole("button", { name: "Proyectos" }).click();
+
     // Proyecto
     await page.getByLabel("Nombre", { exact: true }).fill(proyecto);
     await page.getByRole("button", { name: "Crear proyecto" }).click();
@@ -55,6 +60,7 @@ test("recorrido: cuenta, organización, proyecto y tarea", async ({ page }) => {
 
     // Persistencia: tras recargar, el estado viene de la base de datos
     await page.reload();
+    await secciones.getByRole("button", { name: "Proyectos" }).click();
     await page.getByRole("button", { name: proyecto }).click();
     const recargada = page.getByRole("listitem").filter({ hasText: tarea });
     await expect(recargada.getByText("En curso", { exact: true })).toBeVisible();

@@ -174,6 +174,15 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Componentes | `Espacio`, `Acceso`, `Proyectos`, `TareasProyecto`, `FilaTarea`, `Notificaciones`, `Aviso`, `AvisoError`, `Cargando`, `EsqueletoLista` y `Campo`; clases compartidas `claseBotonPrincipal`, `claseBotonSecundario`, `claseBotonFila` y `claseCampo` |
 | Pruebas E2E | `frontend/e2e/recorrido.spec.ts` (Playwright, configuración en `frontend/playwright.config.ts`) y script de npm `e2e`; en CI, job `frontend` (tipos, lint, build y comprobación de claves en el bundle) y pasos E2E en el job `pgtap` |
 
+### Añadidos con el panel operativo (fase 3, 2026-10-25)
+| Elemento | Nombre oficial |
+|---|---|
+| Archivos | `espacio/panel.tsx` (panel operativo) y `espacio/formato.ts` (formato de fechas: `textoVencimiento` y `textoInstante`) |
+| Datos | Tipos `Prioridad` y `HallazgoAbierto`; funciones `listarHallazgosAbiertos`, `resolverHallazgo` (RPC `resolver_hallazgo`) y `listarEstadosDeTareas` |
+| Secciones del espacio | `panel` (inicial), `proyectos` y `notificaciones`; tipo `Abierto` (`proyectoId` y `tareaId` opcional) para abrir una tarea desde el panel, que se resalta con `tareaDestacada` |
+| Componentes | `Panel`, `FilaHallazgo`, `ResumenProyectos` y `NotificacionesRecientes` |
+| Pruebas E2E | `frontend/e2e/panel.spec.ts` (espera a la detección programada, abre la tarea y resuelve el hallazgo) |
+
 ### Añadidos con los flujos versionados (ADR-0007, fase 2, 2026-10-25)
 | Elemento | Nombre oficial |
 |---|---|
