@@ -3,7 +3,7 @@ import { ArrowLeft, Bell, Building2, FolderKanban, LayoutDashboard, LogOut, Plus
 import { useCallback, useState, type FormEvent } from "react";
 import { MarcaNexo } from "../componentes/simbolo_nexo.tsx";
 import { SelectorTema } from "../componentes/selector_tema.tsx";
-import { enlacePortada } from "../ruta/ruta.ts";
+import { enlaceEspacio, enlacePortada } from "../ruta/ruta.ts";
 import { useSesion } from "../sesion/sesion.ts";
 import { configuracion } from "../supabase/cliente.ts";
 import type { PreferenciaTema } from "../tema/tema.ts";
@@ -104,6 +104,13 @@ function EspacioConSesion({
     const [abierto, setAbierto] = useState<Abierto | null>(null);
     const [creandoOrganizacion, setCreandoOrganizacion] = useState(false);
 
+    // Tras cerrar la sesión se vuelve a #/app, que muestra «Inicia sesión»
+    // aunque se hubiera llegado por el enlace de registro.
+    async function cerrarSesion() {
+        const { error } = await cliente.auth.signOut();
+        if (!error) window.location.hash = enlaceEspacio;
+    }
+
     if (carga.estado === "cargando") {
         return (
             <div className="flex min-h-dvh items-center justify-center">
@@ -141,7 +148,7 @@ function EspacioConSesion({
                     {!organizacion && (
                         <button
                             type="button"
-                            onClick={() => cliente.auth.signOut()}
+                            onClick={cerrarSesion}
                             className="transicion mt-6 inline-flex items-center gap-2 rounded text-sm text-texto-2 hover:text-texto"
                         >
                             <LogOut size={16} aria-hidden="true" />
@@ -229,7 +236,7 @@ function EspacioConSesion({
                     <p className="truncate px-2.5 text-xs text-texto-2">{sesion.user.email}</p>
                     <button
                         type="button"
-                        onClick={() => cliente.auth.signOut()}
+                        onClick={cerrarSesion}
                         className="transicion flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-texto-2 hover:bg-elevada hover:text-texto"
                     >
                         <LogOut size={16} aria-hidden="true" />
@@ -249,7 +256,7 @@ function EspacioConSesion({
                     <SelectorTema preferencia={preferencia} alElegir={alElegirTema} />
                     <button
                         type="button"
-                        onClick={() => cliente.auth.signOut()}
+                        onClick={cerrarSesion}
                         title="Cerrar sesión"
                         className="transicion inline-flex size-9 items-center justify-center rounded-lg text-texto-2 hover:bg-elevada hover:text-texto lg:hidden"
                     >
