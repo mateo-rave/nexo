@@ -1,11 +1,19 @@
 # Fase 5 — Motor mínimo de reglas de automatización
 
-- Estado: **bloque 5.0 aprobado** por el propietario el 2026-10-27, con este plan y la [ADR-0008](../architecture/decisions/0008-motor-minimo-reglas-automatizacion.md) (aceptada). **La implementación del bloque 5.1 queda autorizada**; los bloques 5.2 y 5.3 siguen la regla de empezar solo tras aprobar el anterior.
+- Estado: **bloques 5.0, 5.1 y 5.2 terminados**; **bloque 5.3 en revisión**.
+  - 5.0 lo aprobó el propietario el 2026-10-27, con este plan y la [ADR-0008](../architecture/decisions/0008-motor-minimo-reglas-automatizacion.md) (aceptada).
+  - El backend de 5.1 y 5.2 está integrado en `main` mediante el PR #8, con el CI en verde.
 - Avance (2026-10-27): por indicación del propietario, **el backend de los bloques 5.1 y 5.2 se implementa junto**.
   - Migraciones `20261027120000_reglas_automatizacion.sql` y `20261027130000_ejecucion_automatizaciones.sql`.
   - Pruebas `supabase/tests/reglas_automatizacion.test.sql` (70), `supabase/tests/ejecucion_automatizaciones.test.sql` (74, con el aislamiento de fallos de cada pasada) y `pruebas/api/reglas_automatizacion.test.ts` (4 casos).
-  - **Escritas, sin ejecutar:** en local no hay Docker, Postgres ni Deno, así que se validarán en CI. No se han aplicado a `nexo-dev`.
-  - La pantalla (bloque 5.3) no ha empezado.
+  - En local no hay Docker, Postgres ni Deno: se validaron en el CI del PR #8, fusionado en `main`. No se han aplicado a `nexo-dev`.
+  - Bloque 5.3 (2026-10-27), en revisión, sin cambios en migraciones, RPC ni modelo de datos.
+    - Sección «Reglas» del espacio (`frontend/src/espacio/automatizaciones.tsx`).
+    - Prueba E2E `frontend/e2e/reglas.spec.ts`, que se ejecutará en CI.
+    - **Revisión visual pendiente:** todavía no se ha podido inspeccionar la pantalla en el navegador con el entorno completo (frontend con un Supabase que tenga las migraciones de las fases 2 a 5).
+    - Limitaciones del backend actual:
+      - el nombre de una regla se fija al crearla, porque no hay RPC para renombrarla;
+      - una ejecución no muestra qué tarea la causó, porque la cola de eventos no es legible para los usuarios.
   - Detalles de implementación: ADR-0008, «Notas de implementación».
 - Fecha: 2026-10-27
 - Referencias: [ADR-0003](../architecture/decisions/0003-separacion-api-datos-sql-edge-functions.md), [ADR-0005](../architecture/decisions/0005-nombres-en-espanol.md), [ADR-0007](../architecture/decisions/0007-modelo-proyectos-tareas-estados-flujos.md), [ADR-0008](../architecture/decisions/0008-motor-minimo-reglas-automatizacion.md) (aceptada), [permisos](../security/permissions.md), [estrategia de pruebas](../qa/test-strategy.md), [alcance del MVP](../product/mvp-scope.md).
