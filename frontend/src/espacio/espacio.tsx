@@ -1,5 +1,5 @@
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
-import { ArrowLeft, Bell, Building2, FolderKanban, LogOut, Plus, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Bell, Building2, FolderKanban, LayoutDashboard, LogOut, Plus, type LucideIcon } from "lucide-react";
 import { useCallback, useState, type FormEvent } from "react";
 import { MarcaNexo } from "../componentes/simbolo_nexo.tsx";
 import { SelectorTema } from "../componentes/selector_tema.tsx";
@@ -11,6 +11,7 @@ import { Acceso } from "./acceso.tsx";
 import { useCarga } from "./carga.ts";
 import { crearOrganizacion, listarOrganizaciones, listarProyectos, type Organizacion } from "./datos.ts";
 import { Notificaciones } from "./notificaciones.tsx";
+import { Panel } from "./panel.tsx";
 import { Proyectos } from "./proyectos.tsx";
 import { TareasProyecto } from "./tareas.tsx";
 import { Aviso, AvisoError, Campo, Cargando, claseBotonPrincipal, claseCampo } from "./ui.tsx";
@@ -77,7 +78,11 @@ function guardarOrganizacion(id: string): void {
     }
 }
 
-type Seccion = "proyectos" | "notificaciones";
+type Seccion = "panel" | "proyectos" | "notificaciones";
+
+// Proyecto abierto en la sección Proyectos y, si se llega desde el panel, la
+// tarea que se resalta.
+type Abierto = { proyectoId: string; tareaId?: string };
 
 const etiquetasRol: Record<Organizacion["rol"], string> = {
     propietario: "Propietario",
@@ -95,7 +100,8 @@ function EspacioConSesion({
     const cargarOrganizaciones = useCallback(() => listarOrganizaciones(cliente, usuarioId), [cliente, usuarioId]);
     const { carga, recargar } = useCarga(cargarOrganizaciones);
     const [elegida, setElegida] = useState<string | null>(leerOrganizacionGuardada);
-    const [seccion, setSeccion] = useState<Seccion>("proyectos");
+    const [seccion, setSeccion] = useState<Seccion>("panel");
+    const [abierto, setAbierto] = useState<Abierto | null>(null);
     const [creandoOrganizacion, setCreandoOrganizacion] = useState(false);
 
     if (carga.estado === "cargando") {
@@ -149,7 +155,12 @@ function EspacioConSesion({
 
     const elegir = (id: string) => {
         setElegida(id);
+        setAbierto(null);
         guardarOrganizacion(id);
+    };
+    const irA = (destino: Seccion) => {
+        setSeccion(destino);
+        setAbierto(null);
     };
 
     return (
@@ -195,16 +206,22 @@ function EspacioConSesion({
 
                 <nav aria-label="Secciones" className="mt-3 flex gap-1 lg:mt-5 lg:flex-col">
                     <EnlaceSeccion
+                        etiqueta="Panel"
+                        Icono={LayoutDashboard}
+                        activa={seccion === "panel"}
+                        alPulsar={() => irA("panel")}
+                    />
+                    <EnlaceSeccion
                         etiqueta="Proyectos"
                         Icono={FolderKanban}
                         activa={seccion === "proyectos"}
-                        alPulsar={() => setSeccion("proyectos")}
+                        alPulsar={() => irA("proyectos")}
                     />
                     <EnlaceSeccion
                         etiqueta="Notificaciones"
                         Icono={Bell}
                         activa={seccion === "notificaciones"}
-                        alPulsar={() => setSeccion("notificaciones")}
+                        alPulsar={() => irA("notificaciones")}
                     />
                 </nav>
 
@@ -241,14 +258,30 @@ function EspacioConSesion({
                     </button>
                 </header>
                 <main id="contenido" tabIndex={-1} className="mx-auto max-w-[1100px] px-4 py-6 outline-none sm:px-6 sm:py-8">
-                    {seccion === "proyectos" ? (
+                    {seccion === "panel" && (
+                        <Panel
+                            key={organizacion.id}
+                            cliente={cliente}
+                            organizacion={organizacion}
+                            usuarioId={usuarioId}
+                            alAbrirTarea={(proyectoId, tareaId) => {
+                                setSeccion("proyectos");
+                                setAbierto({ proyectoId, tareaId });
+                            }}
+                            alVerNotificaciones={() => irA("notificaciones")}
+                        />
+                    )}
+                    {seccion === "proyectos" && (
                         <SeccionProyectos
                             key={organizacion.id}
                             cliente={cliente}
                             organizacion={organizacion}
                             usuarioId={usuarioId}
+                            abierto={abierto}
+                            alAbrir={setAbierto}
                         />
-                    ) : (
+                    )}
+                    {seccion === "notificaciones" && (
                         <Notificaciones key={organizacion.id} cliente={cliente} organizacion={organizacion} />
                     )}
                 </main>
@@ -285,31 +318,36 @@ function EnlaceSeccion({
 
 // Lista de proyectos o tareas de un proyecto. La lista se carga aquí para que
 // la vista de tareas reciba siempre el proyecto actualizado (por ejemplo, tras
-// archivarlo).
+// archivarlo). Qué proyecto está abierto lo guarda el espacio, para que el
+// panel pueda llevar directamente a una tarea.
 function SeccionProyectos({
     cliente,
     organizacion,
     usuarioId,
+    abierto,
+    alAbrir,
 }: {
     cliente: SupabaseClient;
     organizacion: Organizacion;
     usuarioId: string;
+    abierto: Abierto | null;
+    alAbrir: (abierto: Abierto | null) => void;
 }) {
     const cargar = useCallback(() => listarProyectos(cliente, organizacion.id), [cliente, organizacion.id]);
     const { carga, recargar } = useCarga(cargar);
-    const [abiertoId, setAbiertoId] = useState<string | null>(null);
 
-    const abierto = carga.estado === "listo" ? carga.datos.find((p) => p.id === abiertoId) : undefined;
+    const proyecto = carga.estado === "listo" ? carga.datos.find((p) => p.id === abierto?.proyectoId) : undefined;
 
-    if (abierto) {
+    if (proyecto) {
         return (
             <TareasProyecto
-                key={`${abierto.id}-${abierto.archivado_en ?? "activo"}`}
+                key={`${proyecto.id}-${proyecto.archivado_en ?? "activo"}`}
                 cliente={cliente}
                 organizacion={organizacion}
-                proyecto={abierto}
+                proyecto={proyecto}
                 usuarioId={usuarioId}
-                alVolver={() => setAbiertoId(null)}
+                tareaDestacada={abierto?.tareaId}
+                alVolver={() => alAbrir(null)}
                 alCambiarProyecto={recargar}
             />
         );
@@ -320,7 +358,7 @@ function SeccionProyectos({
             organizacion={organizacion}
             carga={carga}
             recargar={recargar}
-            alAbrir={(proyecto) => setAbiertoId(proyecto.id)}
+            alAbrir={(elegido) => alAbrir({ proyectoId: elegido.id })}
         />
     );
 }

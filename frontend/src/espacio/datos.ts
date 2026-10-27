@@ -236,6 +236,63 @@ export async function eliminarTarea(cliente: SupabaseClient, tareaId: string): P
 }
 
 // -----------------------------------------------------------------------------
+// Panel operativo
+// -----------------------------------------------------------------------------
+
+export type Prioridad = "baja" | "media" | "alta";
+
+// Hallazgo sin resolver con la tarea y el proyecto afectados. Lo crea la
+// detección programada del backend; el frontend no calcula vencimientos.
+export type HallazgoAbierto = {
+    id: string;
+    prioridad: Prioridad;
+    detectado_en: string;
+    tarea: Pick<Tarea, "id" | "titulo" | "estado" | "responsable_id" | "fecha_limite" | "vence_en"> & {
+        proyecto_id: string;
+        proyecto: string;
+    };
+};
+
+export async function listarHallazgosAbiertos(
+    cliente: SupabaseClient,
+    organizacionId: string,
+): Promise<HallazgoAbierto[]> {
+    const filas = exigir(
+        await cliente
+            .from("hallazgos")
+            .select(
+                "id, prioridad, detectado_en, tareas(id, titulo, estado, responsable_id, proyecto_id, fecha_limite, vence_en, proyectos(nombre))",
+            )
+            .eq("organizacion_id", organizacionId)
+            .is("resuelto_en", null)
+            .order("detectado_en"),
+    ) as unknown as {
+        id: string;
+        prioridad: Prioridad;
+        detectado_en: string;
+        tareas: Omit<HallazgoAbierto["tarea"], "proyecto"> & { proyectos: { nombre: string } };
+    }[];
+    return filas.map(({ tareas: { proyectos, ...tarea }, ...hallazgo }) => ({
+        ...hallazgo,
+        tarea: { ...tarea, proyecto: proyectos.nombre },
+    }));
+}
+
+export async function resolverHallazgo(cliente: SupabaseClient, hallazgoId: string): Promise<void> {
+    exigir(await cliente.rpc("resolver_hallazgo", { p_hallazgo_id: hallazgoId }));
+}
+
+// Estado de cada tarea de la organización, para el resumen por proyecto.
+export async function listarEstadosDeTareas(
+    cliente: SupabaseClient,
+    organizacionId: string,
+): Promise<{ proyecto_id: string; estado: EstadoTarea }[]> {
+    return exigir(
+        await cliente.from("tareas").select("proyecto_id, estado").eq("organizacion_id", organizacionId),
+    ) as { proyecto_id: string; estado: EstadoTarea }[];
+}
+
+// -----------------------------------------------------------------------------
 // Notificaciones (RLS: cada persona solo ve las suyas)
 // -----------------------------------------------------------------------------
 

@@ -1,9 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Archive, ArrowLeft, CalendarX2, ListPlus, Trash2 } from "lucide-react";
-import { useCallback, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { EtiquetaEstado } from "../componentes/etiqueta_estado.tsx";
 import { estilosEstado, type EstadoTarea } from "../componentes/estados.ts";
 import { useCarga } from "./carga.ts";
+import { textoVencimiento } from "./formato.ts";
 import {
     archivarProyecto,
     asignarResponsable,
@@ -36,44 +37,18 @@ type Propiedades = {
     organizacion: Organizacion;
     proyecto: Proyecto;
     usuarioId: string;
+    // Tarea a la que se llega desde el panel: se resalta y se lleva a la vista.
+    tareaDestacada?: string;
     alVolver: () => void;
     alCambiarProyecto: () => void;
 };
-
-// Vencimiento tal como lo eligió el usuario (ADR-0007): sin hora, el día; con
-// hora, el instante en la zona de la organización, indicando la zona.
-function textoVencimiento(tarea: Tarea, zonaHoraria: string): string | null {
-    if (tarea.fecha_limite) {
-        const dia = new Intl.DateTimeFormat("es", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            timeZone: "UTC",
-        }).format(new Date(`${tarea.fecha_limite}T00:00:00Z`));
-        return `Vence el ${dia}`;
-    }
-    if (tarea.vence_en) {
-        const instante = new Intl.DateTimeFormat("es", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: zonaHoraria,
-            timeZoneName: "short",
-        }).format(new Date(tarea.vence_en));
-        return `Vence el ${instante}`;
-    }
-    return null;
-}
 
 export function TareasProyecto({
     cliente,
     organizacion,
     proyecto,
     usuarioId,
+    tareaDestacada,
     alVolver,
     alCambiarProyecto,
 }: Propiedades) {
@@ -175,6 +150,7 @@ export function TareasProyecto({
                                                 .filter((t) => t.estado_origen === tarea.estado)
                                                 .map((t) => t.estado_destino)}
                                             vencida={carga.datos.vencidas.has(tarea.id)}
+                                            destacada={tarea.id === tareaDestacada}
                                             // Comodidad de interfaz: el backend vuelve a comprobar
                                             // permisos y transiciones en cada RPC.
                                             puedeGestionar={
@@ -212,6 +188,7 @@ function FilaTarea({
     miembros,
     siguientes,
     vencida,
+    destacada,
     puedeGestionar,
     puedeEliminar,
     soloLectura,
@@ -225,6 +202,7 @@ function FilaTarea({
     miembros: Miembro[];
     siguientes: EstadoTarea[];
     vencida: boolean;
+    destacada: boolean;
     puedeGestionar: boolean;
     puedeEliminar: boolean;
     soloLectura: boolean;
@@ -235,9 +213,27 @@ function FilaTarea({
 }) {
     const vencimiento = textoVencimiento(tarea, zonaHoraria);
     const acciones = !soloLectura && ((puedeGestionar && siguientes.length > 0) || puedeEliminar);
+    const fila = useRef<HTMLLIElement>(null);
+
+    // Al llegar desde el panel, la fila recibe el foco (también para teclado y
+    // lectores de pantalla) y se desplaza hasta ella sin animación.
+    useEffect(() => {
+        if (destacada) {
+            fila.current?.focus({ preventScroll: true });
+            fila.current?.scrollIntoView({ block: "center" });
+        }
+    }, [destacada]);
 
     return (
-        <li className="grid gap-3 px-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_13rem] sm:gap-6">
+        <li
+            ref={fila}
+            id={`tarea-${tarea.id}`}
+            tabIndex={destacada ? -1 : undefined}
+            aria-current={destacada ? "true" : undefined}
+            className={`grid gap-3 px-4 py-3.5 outline-none sm:grid-cols-[minmax(0,1fr)_13rem] sm:gap-6 ${
+                destacada ? "bg-acento-suave/60 ring-2 ring-acento ring-inset first:rounded-t-xl last:rounded-b-xl" : ""
+            }`}
+        >
             <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                     <EtiquetaEstado estado={tarea.estado} />
