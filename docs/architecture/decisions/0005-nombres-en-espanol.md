@@ -183,6 +183,20 @@ Las cuatro RPC (`agregar_miembro`, `cambiar_rol_miembro`, `quitar_miembro`, `sal
 | Componentes | `Panel`, `FilaHallazgo`, `ResumenProyectos` y `NotificacionesRecientes` |
 | Pruebas E2E | `frontend/e2e/panel.spec.ts` (espera a la detección programada, abre la tarea y resuelve el hallazgo) |
 
+### Añadidos con el rediseño de la portada (2026-10-25)
+| Elemento | Nombre oficial |
+|---|---|
+| Archivos | `portada/maqueta_producto.tsx` (maqueta ilustrativa del producto) |
+| Componentes | `MaquetaProducto`, `Tarjeta`, `Pieza`, `EtiquetaDisponibilidad` y `ColumnaPie`; tipo `Disponibilidad` (`disponible`, `en_desarrollo`, `planificado`, `proximamente`) |
+| Rutas | `enlaceRegistro` (`#/app/registro`): abre el espacio con el formulario de registro |
+
+### Añadidos con el rediseño de las pantallas de acceso (2026-10-26)
+| Elemento | Nombre oficial |
+|---|---|
+| Archivos | `espacio/panel_acceso.tsx` (panel visual ilustrativo de las pantallas de acceso) |
+| Componentes | `PanelAcceso`, `Tramo`, `CampoAcceso` y `CampoContrasena`; tipos `EstadoEtapa` (`completada`, `activa`, `pendiente`) y `Errores` |
+| Utilidades CSS de movimiento | `entrada-lateral`, `pulso-acento`, `encender`, `trazo-activo`, `latido` y `reticula-puntos` |
+
 ### Añadidos con los flujos versionados (ADR-0007, fase 2, 2026-10-25)
 | Elemento | Nombre oficial |
 |---|---|

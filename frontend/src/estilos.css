@@ -155,6 +155,85 @@
     animation: aparecer 180ms var(--ease-nexo) both;
 }
 
+/* Pantallas de acceso: el panel visual entra desde la derecha, después del
+   formulario, para no competir con él. */
+@keyframes entrar-lateral {
+    from {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+}
+
+@utility entrada-lateral {
+    animation: entrar-lateral 420ms var(--ease-nexo) 160ms both;
+}
+
+/* Etapa activa del flujo ilustrativo: un pulso de brillo lento. */
+@keyframes pulso-acento {
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 color-mix(in oklab, var(--acento) 35%, transparent);
+    }
+    50% {
+        box-shadow: 0 0 0 6px color-mix(in oklab, var(--acento) 0%, transparent);
+    }
+}
+
+@utility pulso-acento {
+    animation: pulso-acento 2.6s var(--ease-nexo) infinite;
+}
+
+/* Las etapas se iluminan una tras otra al cargar (retraso con --retraso). */
+@keyframes encender {
+    from {
+        opacity: 0.35;
+    }
+}
+
+@utility encender {
+    animation: encender 520ms var(--ease-nexo) both;
+    animation-delay: var(--retraso, 0ms);
+}
+
+/* Tramo en marcha entre dos etapas: trazos que avanzan despacio. */
+@keyframes avanzar-trazo {
+    to {
+        background-position: 16px 0;
+    }
+}
+
+@utility trazo-activo {
+    background-image: linear-gradient(90deg, var(--acento) 50%, transparent 0);
+    background-size: 8px 1px;
+    background-repeat: repeat-x;
+    background-position: 0 0;
+    animation: avanzar-trazo 1.6s linear infinite;
+}
+
+/* Indicador de actividad: cambia de intensidad, sin parpadear. */
+@keyframes latido {
+    50% {
+        opacity: 0.45;
+    }
+}
+
+@utility latido {
+    animation: latido 2.8s ease-in-out infinite;
+}
+
+/* Retícula de puntos del panel visual, con un desplazamiento casi imperceptible. */
+@keyframes derivar {
+    to {
+        background-position: 22px 22px;
+    }
+}
+
+@utility reticula-puntos {
+    background-image: radial-gradient(circle, var(--borde-fuerte) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    animation: derivar 40s linear infinite;
+}
+
 /* Respeta prefers-reduced-motion: sin animaciones ni transiciones. */
 @media (prefers-reduced-motion: reduce) {
     *,

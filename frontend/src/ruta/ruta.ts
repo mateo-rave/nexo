@@ -9,6 +9,8 @@ export type Vista = "portada" | "demostracion" | "espacio";
 
 export const enlaceDemostracion = "#/demostracion";
 export const enlaceEspacio = "#/app";
+// Abre el espacio con el formulario de registro en lugar del de inicio de sesión.
+export const enlaceRegistro = "#/app/registro";
 export const enlacePortada = "#/";
 
 function vistaActual(): Vista {
