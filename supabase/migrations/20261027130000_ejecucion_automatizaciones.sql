@@ -65,6 +65,11 @@ create table public.eventos_automatizacion (
   ejecucion_origen_id uuid,
   profundidad integer not null default 0,
   procesado_en timestamptz,
+  -- Fallos del reparto de este evento (sección 5.7): tras 3 se descarta con
+  -- codigo_error = reparto_fallido, para que un evento envenenado no se
+  -- reintente en cada pasada.
+  intentos_reparto integer not null default 0,
+  codigo_error text,
   creado_en timestamptz not null default now(),
   foreign key (organizacion_id, tarea_id)
     references public.tareas (organizacion_id, id) on delete set null (tarea_id),
@@ -72,6 +77,7 @@ create table public.eventos_automatizacion (
     references public.hallazgos (organizacion_id, id) on delete set null (hallazgo_id),
   constraint eventos_automatizacion_datos_validos check (jsonb_typeof(datos) = 'object'),
   constraint eventos_automatizacion_profundidad_valida check (profundidad >= 0),
+  constraint eventos_automatizacion_intentos_reparto_validos check (intentos_reparto between 0 and 3),
   constraint eventos_automatizacion_hallazgo_solo_en_vencimientos
     check (tipo = 'tarea_vencida' or hallazgo_id is null),
   unique (organizacion_id, clave_evento),
@@ -501,6 +507,8 @@ as $$
     when 'ciclo_detectado' then 'La regla ya forma parte de la cadena que causó el evento.'
     when 'fallo_transitorio' then 'Fallo temporal; se volverá a intentar.'
     when 'reintentos_agotados' then 'No se pudo completar tras agotar los intentos.'
+    when 'error_registro' then 'No se pudo registrar el resultado de la ejecución.'
+    when 'reparto_fallido' then 'No se pudo repartir el evento a sus reglas.'
     else 'No se pudo completar la ejecución.'
   end;
 $$;
@@ -809,12 +817,107 @@ begin
 end;
 $$;
 
--- 5.6 Procesamiento de la cola: reparto y ejecución, en lotes limitados.
+-- 5.6 Registro de un fallo ocurrido fuera del subbloque de la ejecución (por
+-- ejemplo, al escribir su auditoría o al marcarla como fallida). Quien llama
+-- ya deshizo todo lo de ese intento, también sus efectos: la ejecución nunca
+-- queda exitosa sin su registro. Cuenta el intento con la misma política de
+-- 3 intentos totales (esperas de 1 y 5 minutos) y, al agotarlos, la deja
+-- fallida con error_registro.
+-- Cada escritura va en su propio punto de recuperación. Si ni siquiera el
+-- estado se puede guardar, la ejecución queda como estaba (pendiente, nunca
+-- exitosa) y se emite un aviso en el registro del servidor: no se oculta que
+-- no pudo persistirse, y la pasada continúa con las demás.
+create function privado.registrar_fallo_ejecucion(
+  p_ejecucion_id uuid,
+  p_ahora timestamptz,
+  p_sqlstate text
+)
+returns void
+language plpgsql
+volatile
+set search_path = ''
+as $$
+declare
+  v_ejecucion public.ejecuciones_automatizacion;
+begin
+  begin
+    update public.ejecuciones_automatizacion x
+    set intentos = x.intentos + 1,
+        iniciada_en = coalesce(x.iniciada_en, p_ahora),
+        estado = case when x.intentos + 1 >= x.max_intentos then 'fallida' else 'pendiente' end::public.estado_ejecucion,
+        terminada_en = case when x.intentos + 1 >= x.max_intentos then p_ahora end,
+        proximo_intento_en = case
+          when x.intentos + 1 >= x.max_intentos then x.proximo_intento_en
+          when x.intentos + 1 = 1 then p_ahora + interval '1 minute'
+          else p_ahora + interval '5 minutes'
+        end,
+        codigo_error = 'error_registro',
+        mensaje_error = privado.mensaje_resultado_automatizacion('error_registro'),
+        resultado = jsonb_build_object('motivo', 'error_registro')
+    where x.id = p_ejecucion_id
+      and x.estado = 'pendiente'
+    returning * into v_ejecucion;
+  exception
+    when others then
+      raise warning 'Nexo: no se pudo registrar el fallo de la ejecución % (SQLSTATE % y después %); sigue pendiente.',
+        p_ejecucion_id, p_sqlstate, sqlstate;
+      return;
+  end;
+
+  if v_ejecucion.estado = 'fallida' then
+    begin
+      insert into public.acciones_automatizacion (organizacion_id, ejecucion_id, orden, tipo, estado)
+      select v_ejecucion.organizacion_id, p_ejecucion_id, a.posicion::integer, a.valor ->> 'tipo', 'fallida'
+      from public.versiones_regla v
+      cross join lateral jsonb_array_elements(v.acciones) with ordinality a (valor, posicion)
+      where v.id = v_ejecucion.version_regla_id
+      on conflict (ejecucion_id, orden) do update set estado = 'fallida';
+    exception
+      when others then
+        raise warning 'Nexo: la ejecución % quedó fallida (%), pero no se pudieron marcar sus acciones (SQLSTATE %).',
+          p_ejecucion_id, v_ejecucion.codigo_error, sqlstate;
+    end;
+
+    begin
+      insert into public.auditoria (organizacion_id, actor_id, accion, tipo_recurso, recurso_id, detalles)
+      values (
+        v_ejecucion.organizacion_id, null, 'ejecucion.terminada', 'ejecucion', p_ejecucion_id,
+        jsonb_build_object(
+          'regla_id', v_ejecucion.regla_id,
+          'version_regla_id', v_ejecucion.version_regla_id,
+          'evento_id', v_ejecucion.evento_id,
+          'estado', v_ejecucion.estado,
+          'intentos', v_ejecucion.intentos,
+          'codigo', v_ejecucion.codigo_error
+        )
+      );
+    exception
+      when others then
+        raise warning 'Nexo: la ejecución % quedó fallida (%), pero no se pudo auditar (SQLSTATE %).',
+          p_ejecucion_id, v_ejecucion.codigo_error, sqlstate;
+    end;
+  end if;
+end;
+$$;
+
+-- 5.7 Procesamiento de la cola: reparto y ejecución, en lotes limitados.
 -- Devuelve cuántas ejecuciones intentó en esta pasada.
 -- Reparto: para cada evento sin procesar con al menos 10 segundos de
 -- antigüedad, una ejecución por cada regla con un periodo de activación que
 -- contiene ocurrido_en y una versión publicada antes de ocurrido_en (la de
 -- mayor número), si su activador coincide con el tipo del evento.
+-- Aislamiento de errores: cada evento y cada ejecución van en su propio punto
+-- de recuperación, así un error ordinario de uno no deshace ni detiene los
+-- demás de la pasada.
+--   Evento: si su reparto falla, no se crea ninguna de sus ejecuciones, se
+--   cuenta el fallo y se reintenta en la pasada siguiente; al tercero se
+--   descarta (procesado_en con codigo_error = reparto_fallido) y se audita.
+--   Ejecución: si falla algo fuera de su subbloque interno, se deshace el
+--   intento entero y lo registra privado.registrar_fallo_ejecucion.
+-- query_canceled (cancelación o tiempo agotado de la sentencia) no lo captura
+-- "when others" y no se intercepta: cancela la pasada entera, como debe
+-- poder hacerse, y no queda nada a medias porque la pasada es una sola
+-- transacción.
 create function privado.procesar_automatizaciones(p_ahora timestamptz)
 returns integer
 language plpgsql
@@ -824,9 +927,12 @@ as $$
 declare
   v_limite constant integer := 100;
   v_margen constant interval := interval '10 seconds';
+  v_max_intentos_reparto constant integer := 3;
   v_evento record;
   v_ejecucion_id uuid;
   v_procesadas integer := 0;
+  v_sqlstate text;
+  v_descartado boolean;
 begin
   if p_ahora is null then
     raise exception using errcode = 'PT400',
@@ -847,34 +953,75 @@ begin
     limit v_limite
     for update skip locked
   loop
-    insert into public.ejecuciones_automatizacion (
-      organizacion_id, regla_id, version_regla_id, evento_id, proximo_intento_en
-    )
-    select v_evento.organizacion_id, r.id, v.id, v_evento.id, p_ahora
-    from public.reglas_automatizacion r
-    join lateral (
-      select vr.id, vr.activador
-      from public.versiones_regla vr
-      where vr.regla_id = r.id
-        and vr.estado = 'publicada'
-        and vr.publicada_en <= v_evento.ocurrido_en
-      order by vr.numero desc
-      limit 1
-    ) v on true
-    where r.organizacion_id = v_evento.organizacion_id
-      and v.activador = v_evento.tipo
-      and exists (
-        select 1
-        from public.periodos_activacion_regla p
-        where p.regla_id = r.id
-          and p.activada_en <= v_evento.ocurrido_en
-          and (p.desactivada_en is null or v_evento.ocurrido_en < p.desactivada_en)
+    begin
+      insert into public.ejecuciones_automatizacion (
+        organizacion_id, regla_id, version_regla_id, evento_id, proximo_intento_en
       )
-    on conflict (regla_id, evento_id) do nothing;
+      select v_evento.organizacion_id, r.id, v.id, v_evento.id, p_ahora
+      from public.reglas_automatizacion r
+      join lateral (
+        select vr.id, vr.activador
+        from public.versiones_regla vr
+        where vr.regla_id = r.id
+          and vr.estado = 'publicada'
+          and vr.publicada_en <= v_evento.ocurrido_en
+        order by vr.numero desc
+        limit 1
+      ) v on true
+      where r.organizacion_id = v_evento.organizacion_id
+        and v.activador = v_evento.tipo
+        and exists (
+          select 1
+          from public.periodos_activacion_regla p
+          where p.regla_id = r.id
+            and p.activada_en <= v_evento.ocurrido_en
+            and (p.desactivada_en is null or v_evento.ocurrido_en < p.desactivada_en)
+        )
+      on conflict (regla_id, evento_id) do nothing;
 
-    update public.eventos_automatizacion e
-    set procesado_en = p_ahora
-    where e.id = v_evento.id;
+      update public.eventos_automatizacion e
+      set procesado_en = p_ahora
+      where e.id = v_evento.id;
+    exception
+      when others then
+        -- Se deshizo el reparto de este evento (ninguna de sus ejecuciones
+        -- quedó creada a medias). Se cuenta el fallo; al tercero se descarta.
+        v_sqlstate := sqlstate;
+        v_descartado := false;
+        begin
+          update public.eventos_automatizacion e
+          set intentos_reparto = e.intentos_reparto + 1,
+              procesado_en = case when e.intentos_reparto + 1 >= v_max_intentos_reparto then p_ahora end,
+              codigo_error = case
+                when e.intentos_reparto + 1 >= v_max_intentos_reparto then 'reparto_fallido'
+                else e.codigo_error
+              end
+          where e.id = v_evento.id
+          returning e.procesado_en is not null into v_descartado;
+        exception
+          when others then
+            raise warning 'Nexo: no se pudo registrar el fallo de reparto del evento % (SQLSTATE % y después %); sigue sin procesar.',
+              v_evento.id, v_sqlstate, sqlstate;
+        end;
+
+        if v_descartado then
+          begin
+            insert into public.auditoria (organizacion_id, actor_id, accion, tipo_recurso, recurso_id, detalles)
+            values (
+              v_evento.organizacion_id, null, 'evento.reparto_fallido', 'evento', v_evento.id,
+              jsonb_build_object(
+                'tipo', v_evento.tipo,
+                'intentos', v_max_intentos_reparto,
+                'codigo', 'reparto_fallido'
+              )
+            );
+          exception
+            when others then
+              raise warning 'Nexo: el evento % se descartó (reparto_fallido), pero no se pudo auditar (SQLSTATE %).',
+                v_evento.id, sqlstate;
+          end;
+        end if;
+    end;
   end loop;
 
   -- Ejecución
@@ -887,8 +1034,15 @@ begin
     limit v_limite
     for update skip locked
   loop
-    perform privado.ejecutar_automatizacion(v_ejecucion_id, p_ahora);
     v_procesadas := v_procesadas + 1;
+    begin
+      perform privado.ejecutar_automatizacion(v_ejecucion_id, p_ahora);
+    exception
+      when others then
+        -- Se deshizo el intento entero (estado, acciones, notificaciones y
+        -- auditoría de esta ejecución); el resto de la pasada sigue.
+        perform privado.registrar_fallo_ejecucion(v_ejecucion_id, p_ahora, sqlstate);
+    end;
   end loop;
 
   return v_procesadas;
@@ -954,5 +1108,6 @@ revoke execute on function
     uuid, public.eventos_automatizacion, public.reglas_automatizacion, jsonb
   ),
   privado.ejecutar_automatizacion(uuid, timestamptz),
+  privado.registrar_fallo_ejecucion(uuid, timestamptz, text),
   privado.procesar_automatizaciones(timestamptz)
   from public, anon, authenticated;

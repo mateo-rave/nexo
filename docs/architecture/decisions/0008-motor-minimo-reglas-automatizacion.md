@@ -337,6 +337,21 @@ Detalles que la decisión no fijaba y que se resolvieron al escribir las migraci
      - un trigger que exige el hallazgo al crear un evento `tarea_vencida`.
    - Un `check` estricto en los dos sentidos rompería el borrado de una tarea, que primero vacía el hallazgo del evento y después la tarea.
 5. **Nombre de la columna de versión.** En las ejecuciones se llama `version_regla_id`, siguiendo `version_flujo_id`, y no `version_regla`.
+6. **Aislamiento de errores en cada pasada.** Una pasada del job es una sola transacción. Para que un error ordinario de un evento o de una ejecución no la deshaga entera, cada uno tiene su propio punto de recuperación:
+   - **Reparto de un evento.** Si falla, no queda ninguna de sus ejecuciones a medias:
+     - se cuenta el fallo en `intentos_reparto` y se reintenta en la pasada siguiente;
+     - al tercer fallo, el evento se descarta (`procesado_en` con `codigo_error = reparto_fallido`) y se audita como `evento.reparto_fallido`.
+     - Así un evento envenenado no bloquea la cola.
+   - **Ejecución, fuera de su subbloque interno.** Si falla, por ejemplo, la auditoría final o el marcado como fallida:
+     - se deshace el intento entero, incluidas sus notificaciones;
+     - `privado.registrar_fallo_ejecucion` lo cuenta con la misma política de 3 intentos totales y, al agotarlos, deja la ejecución `fallida` con `error_registro`.
+     - Nunca queda `exitosa` sin su registro.
+   - **Registro del propio fallo.** Cada escritura del registro (estado, acciones, auditoría) va en su propio punto de recuperación. Si ni el estado se puede guardar:
+     - la ejecución sigue `pendiente`, nunca `exitosa`;
+     - se emite un aviso (`raise warning`) en el registro del servidor;
+     - la pasada sigue con las demás.
+     - Esa ejecución ocupa un hueco del lote en cada pasada hasta que se corrija la causa, pero no detiene a las otras.
+   - **Cancelaciones.** `query_canceled` (cancelación o tiempo agotado de la sentencia) no lo captura `when others` y no se intercepta: cancela la pasada entera, como debe poder hacerse. No queda nada a medias, porque la pasada es una sola transacción.
 
 Otras precisiones:
 - **Destinatarios.** Se calculan entre los miembros actuales, con la organización bloqueada `for share`. Por eso el motivo `ya_no_es_miembro` del apartado 5 no llega a producirse: solo se usa `ya_notificado`.

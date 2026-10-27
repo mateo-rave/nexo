@@ -8,7 +8,7 @@
 -- eventos), así el reparto y los reintentos se prueban con tiempo controlado.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(62);
+select plan(74);
 
 -- Datos sintéticos (como postgres, sin RLS).
 -- 1111 propietario_a · 2222 administrador_a · 3333 miembro_a
@@ -848,7 +848,196 @@ begin
 end $$;
 
 -- -----------------------------------------------------------------------------
--- 9. RLS, aislamiento y permisos
+-- 9. Aislamiento de fallos: un error de un evento o de una ejecución no impide
+-- procesar el resto de la pasada, y el estado guardado sigue siendo coherente.
+-- Cuatro eventos sintéticos que RR acepta (en_curso). Triggers de prueba:
+--   prueba:veneno    → falla el reparto (insertar su ejecución);
+--   prueba:auditoria → falla la auditoría final de su ejecución;
+--   prueba:registro  → falla cualquier actualización de su ejecución, también
+--                      el registro del propio fallo;
+--   prueba:sana      → sin fallos.
+-- -----------------------------------------------------------------------------
+create function public.prueba_clave_de_evento(p_evento_id uuid)
+returns text
+language sql
+stable
+as $$
+  select clave_evento from public.eventos_automatizacion where id = p_evento_id;
+$$;
+
+create function public.prueba_fallo_reparto()
+returns trigger
+language plpgsql
+as $$
+begin
+  if public.prueba_clave_de_evento(new.evento_id) = 'prueba:veneno' then
+    raise exception 'reparto de prueba';
+  end if;
+  return new;
+end;
+$$;
+
+create function public.prueba_fallo_actualizacion()
+returns trigger
+language plpgsql
+as $$
+begin
+  if public.prueba_clave_de_evento(new.evento_id) = 'prueba:registro' then
+    raise exception 'registro de prueba';
+  end if;
+  return new;
+end;
+$$;
+
+create function public.prueba_fallo_auditoria()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.accion = 'ejecucion.terminada'
+     and public.prueba_clave_de_evento((new.detalles ->> 'evento_id')::uuid) = 'prueba:auditoria' then
+    raise exception 'auditoría de prueba';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger ejecuciones_prueba_fallo_reparto
+  before insert on public.ejecuciones_automatizacion
+  for each row execute function public.prueba_fallo_reparto();
+
+create trigger ejecuciones_prueba_fallo_actualizacion
+  before update on public.ejecuciones_automatizacion
+  for each row execute function public.prueba_fallo_actualizacion();
+
+create trigger auditoria_prueba_fallo
+  before insert on public.auditoria
+  for each row execute function public.prueba_fallo_auditoria();
+
+insert into public.eventos_automatizacion (organizacion_id, tipo, tarea_id, clave_evento, datos, ocurrido_en)
+select 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'tarea_estado_cambiado', 'c1000000-0000-0000-0000-000000000001',
+  c.clave,
+  '{"titulo": "Estado", "estado_anterior": "pendiente", "estado_nuevo": "en_curso",
+    "proyecto_id": "a1a1a1a1-0000-0000-0000-000000000001", "responsable_id": "33333333-3333-3333-3333-333333333333"}',
+  clock_timestamp()
+from (values ('prueba:veneno'), ('prueba:auditoria'), ('prueba:registro'), ('prueba:sana')) c (clave);
+
+select lives_ok(
+  $$select privado.procesar_automatizaciones('2100-01-01 07:00:00+00')$$,
+  'una pasada con un evento y dos ejecuciones con fallos termina sin abortar'
+);
+
+select ok(
+  (select x.estado = 'exitosa' and x.intentos = 1
+   from public.ejecuciones_automatizacion x
+   join public.eventos_automatizacion e on e.id = x.evento_id
+   where e.clave_evento = 'prueba:sana')
+  and (select count(*) = 1 from public.notificaciones n
+       join public.eventos_automatizacion e on e.id = n.evento_id
+       where e.clave_evento = 'prueba:sana'),
+  'el evento sano se procesa en la misma pasada que los que fallan'
+);
+
+select ok(
+  (select e.procesado_en is null and e.intentos_reparto = 1 and e.codigo_error is null
+      and not exists (select 1 from public.ejecuciones_automatizacion x where x.evento_id = e.id)
+   from public.eventos_automatizacion e where e.clave_evento = 'prueba:veneno'),
+  'un reparto que falla no deja ejecuciones a medias: se cuenta y queda para la pasada siguiente'
+);
+
+select ok(
+  (select x.estado = 'pendiente'
+      and x.intentos = 1
+      and x.proximo_intento_en = '2100-01-01 07:01:00+00'
+      and x.codigo_error = 'error_registro'
+      and not exists (select 1 from public.acciones_automatizacion a where a.ejecucion_id = x.id)
+      and not exists (select 1 from public.notificaciones n where n.evento_id = x.evento_id)
+   from public.ejecuciones_automatizacion x
+   join public.eventos_automatizacion e on e.id = x.evento_id
+   where e.clave_evento = 'prueba:auditoria'),
+  'si falla la auditoría final, se deshace el intento entero (sin notificación) y no queda exitosa'
+);
+
+select ok(
+  (select x.estado = 'pendiente'
+      and x.intentos = 0
+      and not exists (select 1 from public.notificaciones n where n.evento_id = x.evento_id)
+   from public.ejecuciones_automatizacion x
+   join public.eventos_automatizacion e on e.id = x.evento_id
+   where e.clave_evento = 'prueba:registro'),
+  'si ni siquiera el fallo se puede registrar, la ejecución sigue pendiente y nunca exitosa'
+);
+
+select lives_ok(
+  $$select privado.procesar_automatizaciones('2100-01-01 07:01:00+00')$$,
+  'segunda pasada con los mismos fallos'
+);
+
+select lives_ok(
+  $$select privado.procesar_automatizaciones('2100-01-01 07:06:00+00')$$,
+  'tercera pasada con los mismos fallos'
+);
+
+select ok(
+  (select e.procesado_en = '2100-01-01 07:06:00+00'
+      and e.intentos_reparto = 3
+      and e.codigo_error = 'reparto_fallido'
+      and not exists (select 1 from public.ejecuciones_automatizacion x where x.evento_id = e.id)
+   from public.eventos_automatizacion e where e.clave_evento = 'prueba:veneno')
+  and (select count(*) = 1 from public.auditoria a
+       join public.eventos_automatizacion e on e.id = a.recurso_id
+       where a.accion = 'evento.reparto_fallido' and a.actor_id is null
+         and e.clave_evento = 'prueba:veneno'),
+  'tras 3 fallos de reparto el evento se descarta con su motivo y queda en auditoría: no se reintenta para siempre'
+);
+
+select ok(
+  (select x.estado = 'fallida'
+      and x.intentos = 3
+      and x.codigo_error = 'error_registro'
+      and x.mensaje_error = 'No se pudo registrar el resultado de la ejecución.'
+      and x.terminada_en = '2100-01-01 07:06:00+00'
+      and (select count(*) = 1 and bool_and(a.estado = 'fallida')
+           from public.acciones_automatizacion a where a.ejecucion_id = x.id)
+      and not exists (select 1 from public.notificaciones n where n.evento_id = x.evento_id)
+      and not exists (select 1 from public.auditoria a
+                      where a.accion = 'ejecucion.terminada' and a.recurso_id = x.id)
+   from public.ejecuciones_automatizacion x
+   join public.eventos_automatizacion e on e.id = x.evento_id
+   where e.clave_evento = 'prueba:auditoria'),
+  'tras 3 intentos queda fallida con sus acciones fallidas; sin la auditoría que no pudo escribirse ni efectos'
+);
+
+select ok(
+  (select x.estado = 'pendiente' and x.intentos = 0
+   from public.ejecuciones_automatizacion x
+   join public.eventos_automatizacion e on e.id = x.evento_id
+   where e.clave_evento = 'prueba:registro'),
+  'la ejecución cuyo estado no se puede guardar sigue pendiente en cada pasada, sin bloquear a las demás'
+);
+
+drop trigger ejecuciones_prueba_fallo_reparto on public.ejecuciones_automatizacion;
+drop trigger ejecuciones_prueba_fallo_actualizacion on public.ejecuciones_automatizacion;
+drop trigger auditoria_prueba_fallo on public.auditoria;
+
+select lives_ok(
+  $$select privado.procesar_automatizaciones('2100-01-01 07:10:00+00')$$,
+  'pasada sin los fallos de prueba'
+);
+
+select ok(
+  (select x.estado = 'exitosa' and x.intentos = 1
+   from public.ejecuciones_automatizacion x
+   join public.eventos_automatizacion e on e.id = x.evento_id
+   where e.clave_evento = 'prueba:registro')
+  and (select count(*) = 1 from public.notificaciones n
+       join public.eventos_automatizacion e on e.id = n.evento_id
+       where e.clave_evento = 'prueba:registro'),
+  'corregida la causa, la ejecución pendiente se completa en la pasada siguiente'
+);
+
+-- -----------------------------------------------------------------------------
+-- 10. RLS, aislamiento y permisos
 -- -----------------------------------------------------------------------------
 select is_empty(
   $$select x.id from public.ejecuciones_automatizacion x

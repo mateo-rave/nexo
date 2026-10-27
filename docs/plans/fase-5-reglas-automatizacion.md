@@ -3,7 +3,7 @@
 - Estado: **bloque 5.0 aprobado** por el propietario el 2026-10-27, con este plan y la [ADR-0008](../architecture/decisions/0008-motor-minimo-reglas-automatizacion.md) (aceptada). **La implementación del bloque 5.1 queda autorizada**; los bloques 5.2 y 5.3 siguen la regla de empezar solo tras aprobar el anterior.
 - Avance (2026-10-27): por indicación del propietario, **el backend de los bloques 5.1 y 5.2 se implementa junto**.
   - Migraciones `20261027120000_reglas_automatizacion.sql` y `20261027130000_ejecucion_automatizaciones.sql`.
-  - Pruebas `supabase/tests/reglas_automatizacion.test.sql` (70), `supabase/tests/ejecucion_automatizaciones.test.sql` (62) y `pruebas/api/reglas_automatizacion.test.ts` (4 casos).
+  - Pruebas `supabase/tests/reglas_automatizacion.test.sql` (70), `supabase/tests/ejecucion_automatizaciones.test.sql` (74, con el aislamiento de fallos de cada pasada) y `pruebas/api/reglas_automatizacion.test.ts` (4 casos).
   - **Escritas, sin ejecutar:** en local no hay Docker, Postgres ni Deno, así que se validarán en CI. No se han aplicado a `nexo-dev`.
   - La pantalla (bloque 5.3) no ha empezado.
   - Detalles de implementación: ADR-0008, «Notas de implementación».
